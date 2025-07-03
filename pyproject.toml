@@ -1,13 +1,13 @@
 [project]
-name = "pyaml"
-description = "Python Accelerator Middle Layer"
+name = "tango-pyaml"
+description = "Bridge between Tango and PyAML"
 readme = "README.md"
 requires-python = ">=3.9"
 dynamic = ["version"]
 #license = {file = "LICENSE"}
-keywords = ["Accelerator", "Synchrotron", "Operation", "Tuning", "Digital Twin", "Commissioning", ]
+keywords = ["Accelerator", "Synchrotron", "Operation", "Tuning", "Digital Twin", "Commissioning", "Tango" ]
 maintainers = [
-    {name = "Simone Maria Liuzzo", email = "simone.liuzzo@esrf.fr"}
+    {name = "Guillaume PICHON", email = "guillaume.pichon@synchrotron-soleil.fr"}
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -23,12 +23,21 @@ classifiers = [
 ]
 
 dependencies = [
-    "pytango>=9.5.1",
+    "PyTango>=9.5.1",
     "pyaml",
-    "scipy>=1.7.3",
-    "PyYAML>=6.0.2",
-    "pydantic>=2.11"
+    "pydantic>=2.0"
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-mock",
+    "ruff",                 # Linter (optionnel)
+    "mypy",                 # Typage statique (optionnel)
+    "ipython",              # Débogage interactif
+]
+[tool.setuptools.packages.find]
+include = ["tango.*"]
 
 [project.urls]
 Homepage = "https://github.com/python-accelerator-middle-layer/tango-pyaml"
