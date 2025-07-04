@@ -1,13 +1,14 @@
 import tango
 from pydantic import BaseModel
 from pyaml.control.deviceaccess import DeviceAccess
+from pyaml.control.readback_value import Value, Quality
 
 PYAMLCLASS : str = "Attribute"
 
 class ConfigModel(BaseModel):
+    """Name of tango attribute (i.e. my/ps/device/current) and optionally, the units"""
     attribute: str
     unit: str = ""
-    """Name of tango attribute (i.e. my/ps/device/current)"""
 
 class Attribute(DeviceAccess):
     def __init__(self, cfg: ConfigModel):
@@ -19,7 +20,6 @@ class Attribute(DeviceAccess):
         self._attribute_dev = tango.DeviceProxy(self._attribute_dev_name)
 
 
-
     def set(self, value: float):
         """Write a value to the Tango attribute."""
         self._attribute_dev.write_attribute(self._attr_name, value)
@@ -28,9 +28,17 @@ class Attribute(DeviceAccess):
         """Read the last written value of the attribute."""
         return self._attribute_dev.read_attribute(self._attr_name).w_value
 
-    def readback(self) -> float:
-        """Return the readback value. Alias for get()."""
-        return self._attribute_dev.read_attribute(self._attr_name).value
+    def readback(self) -> Value:
+        """Return the readback value."""
+        try:
+            attr_value = self._attribute_dev.read_attribute(self._attr_name)
+            quality = Quality[attr_value.quality.name.rsplit('_', 1)[1]] # AttrQuality.ATTR_VALID gives Quality.VALID
+            value = Value(attr_value.value, quality, attr_value.time.todatetime() )
+        except tango.DevFailed as df:
+            print(df)
+            raise df
+
+        return value
 
     def unit(self) -> str:
         return self._unit
