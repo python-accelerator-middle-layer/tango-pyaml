@@ -24,7 +24,6 @@ class Attribute(DeviceAccess):
             raise tango_to_PyAMLException(df)
 
         attr_info = self._attribute_dev.attribute_query(self._attr_name)
-        print(attr_info)
         if attr_info.writable not in [tango._tango.AttrWriteType.READ_WRITE,
                                       tango._tango.AttrWriteType.WRITE,
                                       tango._tango.AttrWriteType.READ_WITH_WRITE]:
