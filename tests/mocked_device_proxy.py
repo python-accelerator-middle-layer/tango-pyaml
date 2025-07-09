@@ -45,16 +45,36 @@ class MockedDeviceProxy(MagicMock):
     def __init__(self, device_name, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.device_name = device_name
-        self.values = {}
+        self.values = {
+            "state": MockedDeviceAttribute("state", tango.DevState.ON),
+            "status": MockedDeviceAttribute("status", "")
+        }
         self.asynch_values = {}
 
+    def name(self) -> str:
+        return self.device_name
+
     def state(self) -> tango.DevState:
-        return tango.DevState.ON
+        return self.read_attribute("state").value
 
     def status(self) -> str:
-        return ""
+        return self.read_attribute("status").value
 
-    def read_attribute(self, attr_name):
+    def command_inout(self, cmd_name, cmd_param = None):
+        return None
+
+    def command_inout_asynch(self, cmd_name, cmd_param = None, forget = False):
+        asynch_index = max(self.asynch_values.keys()) + 1
+        if not forget:
+            self.asynch_values[asynch_index] = self.command_inout(cmd_name, cmd_param)
+        return asynch_index
+
+    def command_inout_reply(self, idx, timeout=None):
+        val = self.asynch_values[idx]
+        del self.asynch_values[idx]
+        return val
+
+    def read_attribute(self, attr_name:str):
         if attr_name not in self.values.keys():
             return MockedDeviceAttribute(attr_name, None)
         return self.values[attr_name]
@@ -70,19 +90,22 @@ class MockedDeviceProxy(MagicMock):
     def write_attribute_asynch(self, attr_name, value) -> int:
         asynch_index = max(self.asynch_values.keys()) + 1
         self.write_attribute(attr_name, value)
+        self.asynch_values[asynch_index] = None
         return asynch_index
 
-    def read_attribute_reply(self, id, extract_as=ExtractAs.Numpy, green_mode=None, wait=True) -> MockedDeviceAttribute:
-        return self.asynch_values[id]
+    def read_attribute_reply(self, idx, extract_as=ExtractAs.Numpy, green_mode=None, wait=True) -> MockedDeviceAttribute:
+        val = self.asynch_values[idx]
+        del self.asynch_values[idx]
+        return val
 
-    def read_attribute_reply(self, id, poll_timeout, extract_as=ExtractAs.Numpy, green_mode=None, wait=True) -> MockedDeviceAttribute:
-        return self.read_attribute_reply(id, poll_timeout, extract_as, green_mode, wait)
+    def read_attribute_reply(self, idx, poll_timeout, extract_as=ExtractAs.Numpy, green_mode=None, wait=True) -> MockedDeviceAttribute:
+        return self.read_attribute_reply(idx, extract_as, green_mode, wait)
 
-    def write_attributes_reply(self, id, green_mode=None, wait=True):
-        pass
+    def write_attributes_reply(self, idx, green_mode=None, wait=True):
+        del self.asynch_values[idx]
 
-    def write_attributes_reply(self, id, poll_timeout, green_mode=None, wait=True):
-        pass
+    def write_attributes_reply(self, idx, poll_timeout, green_mode=None, wait=True):
+        self.write_attributes_reply(idx, green_mode, wait)
 
     def attribute_query(self, attr_name):
         return MockedAttributeInfoEx(attr_name)

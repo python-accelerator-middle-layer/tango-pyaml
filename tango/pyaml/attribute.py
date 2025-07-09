@@ -1,27 +1,12 @@
-import tango
-from pydantic import BaseModel
-from pyaml.control.deviceaccess import DeviceAccess
 from pyaml.control.readback_value import Value, Quality
+from .tango_attribute import TangoAttribute, ConfigModel
 from .tango_pyaml_utils import *
 
 PYAMLCLASS : str = "Attribute"
 
-class ConfigModel(BaseModel):
-    """Name of tango attribute (i.e. my/ps/device/current) and optionally, the units"""
-    attribute: str
-    unit: str = ""
-
-class Attribute(DeviceAccess):
+class Attribute(TangoAttribute):
     def __init__(self, cfg: ConfigModel):
-        super().__init__()
-        self._cfg = cfg
-
-        self._attribute_dev_name, self._attr_name = cfg.attribute.rsplit("/", 1)
-        self._unit = cfg.unit
-        try:
-            self._attribute_dev = tango.DeviceProxy(self._attribute_dev_name)
-        except tango.DevFailed as df:
-            raise tango_to_PyAMLException(df)
+        super().__init__(cfg)
 
         attr_info = self._attribute_dev.attribute_query(self._attr_name)
         if attr_info.writable not in [tango._tango.AttrWriteType.READ_WRITE,
@@ -53,14 +38,3 @@ class Attribute(DeviceAccess):
         except tango.DevFailed as df:
             raise tango_to_PyAMLException(df)
         return value
-
-    def unit(self) -> str:
-        return self._unit
-
-    def name(self) -> str:
-        """Return the name of the variable"""
-        return self._cfg.attribute
-
-    def measure_name(self) -> str:
-        """Return the name of the measure"""
-        return self._attr_name

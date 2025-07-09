@@ -2,6 +2,8 @@ import pyaml.control.readback_value
 import yaml
 import pytest
 import tango
+
+from tango.pyaml.attribute_read_only import AttributeReadOnly
 from .mocked_device_proxy import *
 from unittest.mock import MagicMock, patch
 from tango.pyaml.attribute import Attribute, ConfigModel
@@ -52,10 +54,13 @@ def test_attribute_except(config):
             assert False
         except pyaml.PyAMLException as ex:
             assert type(ex)==pyaml.PyAMLException
+        except:
+            assert False
 
 
 def test_attribute_read_only(config):
     with patch("tango.DeviceProxy", new=MockedROAttrDeviceProxy):
+        # Cannot create an attribute with a read-only tango attribute.
         try:
             Attribute(config)
             assert False
@@ -63,3 +68,24 @@ def test_attribute_read_only(config):
             assert type(ex)==pyaml.PyAMLException
         except:
             assert False
+
+        # Read-only attributes cannot be sets.
+        try:
+            attr = AttributeReadOnly(config)
+            try:
+                attr.set(10)
+                assert False
+            except pyaml.PyAMLException as ex:
+                assert type(ex) == pyaml.PyAMLException
+            except:
+                assert False
+            try:
+                attr.get()
+                assert False
+            except pyaml.PyAMLException as ex:
+                assert type(ex) == pyaml.PyAMLException
+            except:
+                assert False
+        except:
+            assert False
+
