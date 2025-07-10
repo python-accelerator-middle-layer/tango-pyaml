@@ -18,6 +18,13 @@ class Attribute(TangoAttribute):
     def set(self, value: float):
         """Write a value to the Tango attribute."""
         try:
+            self._attribute_dev.write_attribute_asynch(self._attr_name, value)
+        except tango.DevFailed as df:
+            raise tango_to_PyAMLException(df)
+
+    def set_and_wait(self, value: float):
+        """Write a value to the Tango attribute."""
+        try:
             self._attribute_dev.write_attribute(self._attr_name, value)
         except tango.DevFailed as df:
             raise tango_to_PyAMLException(df)

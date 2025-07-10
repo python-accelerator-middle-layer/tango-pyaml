@@ -11,8 +11,10 @@ class AttributeReadOnly(TangoAttribute):
     def __init__(self, cfg: ConfigModel):
         super().__init__(cfg)
 
-
     def set(self, value: float):
+        raise pyaml.PyAMLException(f"Tango attribute {self._cfg.attribute} is not writable.")
+
+    def set_and_wait(self, value: float):
         raise pyaml.PyAMLException(f"Tango attribute {self._cfg.attribute} is not writable.")
 
     def get(self) -> float:
