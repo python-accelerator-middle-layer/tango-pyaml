@@ -51,7 +51,7 @@ class MockedROAttrDeviceProxy(MockedDeviceProxy):
 def test_attribute_get_set(config):
     with patch("tango.DeviceProxy", new=MockedDeviceProxy):
         attr = Attribute(config)
-        attr.set(42.0)
+        attr.set_and_wait(42.0)
         assert attr.get() == 42.0
         assert attr.readback() == 42.0
         assert attr.readback().timestamp is not None
@@ -110,7 +110,7 @@ def test_group_read_write(config_group):
     with patch("tango.Group", new=MockedGroup):
         try:
             attr_list = AttributeList(config_group)
-            attr_list.set(10)
+            attr_list.set_and_wait(10)
             vals = attr_list.readback()
             for val in vals:
                 assert val.value == 10
