@@ -1,3 +1,5 @@
+import os
+import tango
 from pydantic import BaseModel
 from pyaml.control.controlsystem import ControlSystem
 
@@ -50,4 +52,6 @@ class TangoControlSystem(ControlSystem):
 
         This method is a placeholder and should be implemented as needed.
         """
-        pass
+        if self._cfg.tango_host:
+            os.environ["TANGO_HOST"] = self._cfg.tango_host
+        tango.ApiUtil.instance().set_debug_level(self._cfg.debug_level)
