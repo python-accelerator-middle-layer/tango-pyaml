@@ -6,11 +6,34 @@ from pyaml.control.readback_value import Value, Quality
 from .tango_pyaml_utils import *
 
 class ConfigModel(BaseModel):
-    """Name of tango attribute (i.e. my/ps/device/current) and optionally, the units"""
+    """
+    Configuration model for Tango attributes.
+
+    Attributes
+    ----------
+    attribute : str
+        Full path of the Tango attribute (e.g., 'my/ps/device/current').
+    unit : str, optional
+        The unit of the attribute.
+    """
     attribute: str
     unit: str = ""
 
 class TangoAttribute(DeviceAccess, ABC):
+    """
+    Abstract base class for Tango attribute access.
+
+    Parameters
+    ----------
+    cfg : ConfigModel
+        Configuration model containing attribute path and unit.
+
+    Raises
+    ------
+    pyaml.PyAMLException
+        If connection to Tango device proxy fails.
+    """
+
     def __init__(self, cfg: ConfigModel):
         super().__init__()
         self._cfg = cfg
@@ -23,7 +46,19 @@ class TangoAttribute(DeviceAccess, ABC):
             raise tango_to_PyAMLException(df)
 
     def readback(self) -> Value:
-        """Return the readback value."""
+        """
+        Read the attribute value with metadata.
+
+        Returns
+        -------
+        Value
+            The attribute value, quality and timestamp.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            If the Tango read operation fails.
+        """
         try:
             attr_value = self._attribute_dev.read_attribute(self._attr_name)
             quality = Quality[attr_value.quality.name.rsplit('_', 1)[1]] # AttrQuality.ATTR_VALID gives Quality.VALID
@@ -33,12 +68,34 @@ class TangoAttribute(DeviceAccess, ABC):
         return value
 
     def unit(self) -> str:
+        """
+        Return the unit of the attribute.
+
+        Returns
+        -------
+        str
+            The unit string.
+        """
         return self._unit
 
     def name(self) -> str:
-        """Return the name of the variable"""
+        """
+        Return the full attribute name.
+
+        Returns
+        -------
+        str
+            The attribute path (e.g., 'my/ps/device/current').
+        """
         return self._cfg.attribute
 
     def measure_name(self) -> str:
-        """Return the name of the measure"""
+        """
+        Return the short attribute name (last component).
+
+        Returns
+        -------
+        str
+            The attribute name (e.g., 'current').
+        """
         return self._attr_name

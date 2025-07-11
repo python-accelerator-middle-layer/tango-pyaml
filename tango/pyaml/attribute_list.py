@@ -7,12 +7,31 @@ import tango
 PYAMLCLASS : str = "AttributeList"
 
 class ConfigModel(BaseModel):
-    """Name of tango attribute (i.e. my/ps/device/current) and optionally, the units"""
+    """
+    Configuration model for a list of Tango attributes.
+
+    Attributes
+    ----------
+    attributes : list of str
+        List of Tango attribute paths.
+    name : str, optional
+        Group name.
+    unit : str, optional
+        Unit of the attributes.
+    """
     attributes: list[str]
     name: str = ""
     unit: str = ""
 
 class AttributeList(DeviceAccess):
+    """
+    Handle a list of Tango attributes using Tango Groups.
+
+    Parameters
+    ----------
+    cfg : ConfigModel
+        Configuration object with attribute list, name and unit.
+    """
 
     def __init__(self, cfg: ConfigModel):
         super().__init__()
@@ -30,22 +49,63 @@ class AttributeList(DeviceAccess):
             self._tango_groups[attr_name] = tango.Group(self._cfg.name)
             [self._tango_groups[attr_name].add(dev) for dev in dev_list]
 
+
     def name(self) -> str:
+        """
+        Return the group name.
+
+        Returns
+        -------
+        str
+            Group name.
+        """
         return self._cfg.name
+
 
     def measure_name(self) -> str:
+        """
+        Return the group name (alias for measurement name).
+
+        Returns
+        -------
+        str
+            Group name.
+        """
         return self._cfg.name
 
+
     def set(self, value: float):
+        """
+        Write a value asynchronously to all Tango attributes.
+
+        Parameters
+        ----------
+        value : float
+            Value to write.
+        """
         [group.write_attribute_asynch(attr_name, value) for attr_name, group in self._tango_groups.items()]
 
+
     def set_and_wait(self, value: float):
+        """
+        Write a value synchronously to all Tango attributes.
+
+        Parameters
+        ----------
+        value : float
+            Value to write.
+        """
         [group.write_attribute(attr_name, value) for attr_name, group in self._tango_groups.items()]
+
 
     def get(self) -> array:
         """
+        Return the last written values of all attributes.
 
-        :return: The last written value as an array in the same order than the configuration
+        Returns
+        -------
+        numpy.array
+            Array of last written values ordered as in configuration.
         """
         result = {}
         grp_vals = [group.read_attribute(attr_name) for attr_name, group in self._tango_groups.items()]
@@ -58,7 +118,16 @@ class AttributeList(DeviceAccess):
                     result[val.dev_name + '/'+ val.obj_name] = None
         return array([result[attribute] for attribute in self._cfg.attributes])
 
+
     def readback(self) -> array:
+        """
+        Return readback values with metadata for all attributes.
+
+        Returns
+        -------
+        numpy.array
+            Array of Value objects ordered as in configuration.
+        """
         result = {}
         grp_vals = [group.read_attribute(attr_name) for attr_name, group in self._tango_groups.items()]
         for vals in grp_vals:
@@ -72,6 +141,15 @@ class AttributeList(DeviceAccess):
                     result[val.dev_name + '/' + val.obj_name] = None
         return array([result[attribute] for attribute in self._cfg.attributes])
 
+
     def unit(self) -> str:
+        """
+        Return the unit for the attribute list.
+
+        Returns
+        -------
+        str
+            Unit string.
+        """
         return self._cfg.unit
 

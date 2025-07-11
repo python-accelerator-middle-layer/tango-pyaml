@@ -8,20 +8,64 @@ from .tango_pyaml_utils import *
 PYAMLCLASS : str = "AttributeReadOnly"
 
 class AttributeReadOnly(TangoAttribute):
+    """
+    Read-only Tango attribute.
+
+    Parameters
+    ----------
+    cfg : ConfigModel
+        Configuration model containing attribute path and unit.
+    """
     def __init__(self, cfg: ConfigModel):
         super().__init__(cfg)
 
     def set(self, value: float):
+        """
+        Disallowed write operation.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            Always raised because the attribute is read-only.
+        """
         raise pyaml.PyAMLException(f"Tango attribute {self._cfg.attribute} is not writable.")
 
     def set_and_wait(self, value: float):
+        """
+        Disallowed synchronous write operation.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            Always raised because the attribute is read-only.
+        """
         raise pyaml.PyAMLException(f"Tango attribute {self._cfg.attribute} is not writable.")
 
     def get(self) -> float:
+        """
+        Disallowed get operation.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            Always raised because the attribute is read-only.
+        """
         raise pyaml.PyAMLException(f"Tango attribute {self._cfg.attribute} is not writable.")
 
     def readback(self) -> Value:
-        """Return the readback value."""
+        """
+        Return the readback value with quality and timestamp.
+
+        Returns
+        -------
+        Value
+            Readback value containing the value, quality and timestamp.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            If the Tango read operation fails.
+        """
         try:
             attr_value = self._attribute_dev.read_attribute(self._attr_name)
             quality = Quality[attr_value.quality.name.rsplit('_', 1)[1]] # AttrQuality.ATTR_VALID gives Quality.VALID
