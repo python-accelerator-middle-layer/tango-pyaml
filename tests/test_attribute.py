@@ -113,6 +113,6 @@ def test_group_read_write(config_group):
             attr_list.set_and_wait(10)
             vals = attr_list.readback()
             for val in vals:
-                assert val.value == 10
+                assert val == 10
         except:
             assert False

@@ -139,7 +139,8 @@ class AttributeList(DeviceAccess):
                     result[val.dev_name + '/' + val.obj_name] = value
                 else:
                     result[val.dev_name + '/' + val.obj_name] = None
-        return array([result[attribute] for attribute in self._cfg.attributes])
+        list_res = [result[attribute] for attribute in self._cfg.attributes]
+        return array(list_res)
 
 
     def unit(self) -> str:
