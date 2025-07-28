@@ -1,44 +1,109 @@
-import tango
-from pydantic import BaseModel
-from pyaml.control.deviceaccess import DeviceAccess
+from pyaml.control.readback_value import Value, Quality
+from .tango_attribute import TangoAttribute, ConfigModel
+from .tango_pyaml_utils import *
 
 PYAMLCLASS : str = "Attribute"
 
-class ConfigModel(BaseModel):
-    attribute: str
-    unit: str = ""
-    """Name of tango attribute (i.e. my/ps/device/current)"""
+class Attribute(TangoAttribute):
+    """
+    Tango attribute that can be written to.
 
-class Attribute(DeviceAccess):
+    Parameters
+    ----------
+    cfg : ConfigModel
+        Configuration object containing attribute path and units.
+
+    Raises
+    ------
+    pyaml.PyAMLException
+        If the Tango attribute is not writable.
+    """
     def __init__(self, cfg: ConfigModel):
-        super().__init__()
-        self._cfg = cfg
+        super().__init__(cfg)
 
-        self._attribute_dev_name, self._attr_name = cfg.attribute.rsplit("/", 1)
-        self._unit = cfg.unit
-        self._attribute_dev = tango.DeviceProxy(self._attribute_dev_name)
-
+        attr_info = self._attribute_dev.attribute_query(self._attr_name)
+        if attr_info.writable not in [tango._tango.AttrWriteType.READ_WRITE,
+                                      tango._tango.AttrWriteType.WRITE,
+                                      tango._tango.AttrWriteType.READ_WITH_WRITE]:
+            raise pyaml.PyAMLException(f"Tango attribute {self._cfg.attribute} is not writable.")
 
 
     def set(self, value: float):
-        """Write a value to the Tango attribute."""
-        self._attribute_dev.write_attribute(self._attr_name, value)
+        """
+        Write a value asynchronously to the Tango attribute.
+
+        Parameters
+        ----------
+        value : float
+            Value to write to the attribute.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            If the Tango write fails.
+        """
+        try:
+            self._attribute_dev.write_attribute_asynch(self._attr_name, value)
+        except tango.DevFailed as df:
+            raise tango_to_PyAMLException(df)
+
+
+    def set_and_wait(self, value: float):
+        """
+        Write a value synchronously to the Tango attribute.
+
+        Parameters
+        ----------
+        value : float
+            Value to write to the attribute.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            If the Tango write fails.
+        """
+        try:
+            self._attribute_dev.write_attribute(self._attr_name, value)
+        except tango.DevFailed as df:
+            raise tango_to_PyAMLException(df)
 
     def get(self) -> float:
-        """Read the last written value of the attribute."""
-        return self._attribute_dev.read_attribute(self._attr_name).w_value
+        """
+        Get the last written value of the attribute.
 
-    def readback(self) -> float:
-        """Return the readback value. Alias for get()."""
-        return self._attribute_dev.read_attribute(self._attr_name).value
+        Returns
+        -------
+        float
+            The last written value.
 
-    def unit(self) -> str:
-        return self._unit
+        Raises
+        ------
+        pyaml.PyAMLException
+            If the Tango read fails.
+        """
+        try:
+            return self._attribute_dev.read_attribute(self._attr_name).w_value
+        except tango.DevFailed as df:
+            raise tango_to_PyAMLException(df)
 
-    def name(self) -> str:
-        """Return the name of the variable"""
-        return self._cfg.attribute
+    def readback(self) -> Value:
+        """
+        Return the readback value with metadata.
 
-    def measure_name(self) -> str:
-        """Return the name of the measure"""
-        return self._attr_name
+        Returns
+        -------
+        Value
+            The readback value including quality and timestamp.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            If the Tango read fails.
+        """
+        try:
+            attr_value = self._attribute_dev.read_attribute(self._attr_name)
+            quality = Quality[attr_value.quality.name.rsplit('_', 1)[1]] # AttrQuality.ATTR_VALID gives Quality.VALID
+            value = Value(attr_value.value, quality, attr_value.time.todatetime() )
+        except tango.DevFailed as df:
+            raise tango_to_PyAMLException(df)
+        return value
