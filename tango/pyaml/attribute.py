@@ -67,25 +67,6 @@ class Attribute(TangoAttribute):
         except tango.DevFailed as df:
             raise tango_to_PyAMLException(df)
 
-    def get(self) -> float:
-        """
-        Get the last written value of the attribute.
-
-        Returns
-        -------
-        float
-            The last written value.
-
-        Raises
-        ------
-        pyaml.PyAMLException
-            If the Tango read fails.
-        """
-        try:
-            return self._attribute_dev.read_attribute(self._attr_name).w_value
-        except tango.DevFailed as df:
-            raise tango_to_PyAMLException(df)
-
     def readback(self) -> Value:
         """
         Return the readback value with metadata.

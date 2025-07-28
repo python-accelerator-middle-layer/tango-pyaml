@@ -1,41 +1,11 @@
 import pyaml.control.readback_value
-import yaml
-import pytest
-import tango
 
 from tango.pyaml.attribute_read_only import AttributeReadOnly
 from .mocked_device_proxy import *
 from .mocked_group import MockedGroup
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from tango.pyaml.attribute import Attribute
-from tango.pyaml.attribute_list import AttributeList, ConfigModel as GrpCM
-from tango.pyaml.tango_attribute import ConfigModel as AttrCM
-
-# YAML simulé pour configurer l'attribut
-YAML_CONFIG = """
-attribute: "sys/tg_test/1/float_scalar"
-unit: "A"
-"""
-
-YAML_CONFIG_GRP = """
-attributes:
-    - "sys/tg_test/1/float_scalar"
-    - "sys/tg_test/2/float_scalar"
-    - "sys/tg_test/3/float_scalar"
-    - "sys/tg_test/4/float_scalar"
-unit: "A"
-"""
-
-
-@pytest.fixture
-def config():
-    cfg_dict = yaml.safe_load(YAML_CONFIG)
-    return AttrCM(**cfg_dict)
-
-@pytest.fixture
-def config_group():
-    cfg_dict = yaml.safe_load(YAML_CONFIG_GRP)
-    return GrpCM(**cfg_dict)
+from tango.pyaml.attribute_list import AttributeList
 
 
 class MockedReadExceptDeviceProxy(MockedDeviceProxy):

@@ -99,3 +99,22 @@ class TangoAttribute(DeviceAccess, ABC):
             The attribute name (e.g., 'current').
         """
         return self._attr_name
+
+    def get(self) -> float:
+        """
+        Get the last written value of the attribute.
+
+        Returns
+        -------
+        float
+            The last written value.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            If the Tango read fails.
+        """
+        try:
+            return self._attribute_dev.read_attribute(self._attr_name).w_value
+        except tango.DevFailed as df:
+            raise tango_to_PyAMLException(df)
