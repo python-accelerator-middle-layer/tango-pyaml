@@ -1,10 +1,29 @@
+import logging
+from pydantic import BaseModel
+
+from pyaml.control.deviceaccess import DeviceAccess
 from pyaml.control.readback_value import Value, Quality
-from .tango_attribute import TangoAttribute, ConfigModel
 from .tango_pyaml_utils import *
 
 PYAMLCLASS : str = "Attribute"
 
-class Attribute(TangoAttribute):
+logger = logging.getLogger(__name__)
+
+class ConfigModel(BaseModel):
+    """
+    Configuration model for Tango attributes.
+
+    Attributes
+    ----------
+    attribute : str
+        Full path of the Tango attribute (e.g., 'my/ps/device/current').
+    unit : str, optional
+        The unit of the attribute.
+    """
+    attribute: str
+    unit: str = ""
+
+class Attribute(DeviceAccess):
     """
     Tango attribute that can be written to.
 
@@ -18,14 +37,23 @@ class Attribute(TangoAttribute):
     pyaml.PyAMLException
         If the Tango attribute is not writable.
     """
-    def __init__(self, cfg: ConfigModel):
-        super().__init__(cfg)
+    def __init__(self, cfg: ConfigModel, writable=True):
+        super().__init__()
+        self._cfg = cfg
 
-        attr_info = self._attribute_dev.attribute_query(self._attr_name)
-        if attr_info.writable not in [tango._tango.AttrWriteType.READ_WRITE,
-                                      tango._tango.AttrWriteType.WRITE,
-                                      tango._tango.AttrWriteType.READ_WITH_WRITE]:
-            raise pyaml.PyAMLException(f"Tango attribute {self._cfg.attribute} is not writable.")
+        self._attribute_dev_name, self._attr_name = cfg.attribute.rsplit("/", 1)
+        self._unit = cfg.unit
+        try:
+            self._attribute_dev = tango.DeviceProxy(self._attribute_dev_name)
+        except tango.DevFailed as df:
+            raise tango_to_PyAMLException(df)
+
+        if writable:
+            attr_info = self._attribute_dev.attribute_query(self._attr_name)
+            if attr_info.writable not in [tango._tango.AttrWriteType.READ_WRITE,
+                                          tango._tango.AttrWriteType.WRITE,
+                                          tango._tango.AttrWriteType.READ_WITH_WRITE]:
+                raise pyaml.PyAMLException(f"Tango attribute {self._cfg.attribute} is not writable.")
 
 
     def set(self, value: float):
@@ -42,6 +70,7 @@ class Attribute(TangoAttribute):
         pyaml.PyAMLException
             If the Tango write fails.
         """
+        logger.log(logging.DEBUG, f"Setting asynchronously {self._cfg.attribute} to {value}")
         try:
             self._attribute_dev.write_attribute_asynch(self._attr_name, value)
         except tango.DevFailed as df:
@@ -62,6 +91,7 @@ class Attribute(TangoAttribute):
         pyaml.PyAMLException
             If the Tango write fails.
         """
+        logger.log(logging.DEBUG, f"Setting {self._cfg.attribute} to {value}")
         try:
             self._attribute_dev.write_attribute(self._attr_name, value)
         except tango.DevFailed as df:
@@ -81,6 +111,7 @@ class Attribute(TangoAttribute):
         pyaml.PyAMLException
             If the Tango read fails.
         """
+        logger.log(logging.DEBUG, f"Reading {self._cfg.attribute}")
         try:
             attr_value = self._attribute_dev.read_attribute(self._attr_name)
             quality = Quality[attr_value.quality.name.rsplit('_', 1)[1]] # AttrQuality.ATTR_VALID gives Quality.VALID
@@ -88,3 +119,55 @@ class Attribute(TangoAttribute):
         except tango.DevFailed as df:
             raise tango_to_PyAMLException(df)
         return value
+
+    def unit(self) -> str:
+        """
+        Return the unit of the attribute.
+
+        Returns
+        -------
+        str
+            The unit string.
+        """
+        return self._unit
+
+    def name(self) -> str:
+        """
+        Return the full attribute name.
+
+        Returns
+        -------
+        str
+            The attribute path (e.g., 'my/ps/device/current').
+        """
+        return self._cfg.attribute
+
+    def measure_name(self) -> str:
+        """
+        Return the short attribute name (last component).
+
+        Returns
+        -------
+        str
+            The attribute name (e.g., 'current').
+        """
+        return self._attr_name
+
+    def get(self) -> float:
+        """
+        Get the last written value of the attribute.
+
+        Returns
+        -------
+        float
+            The last written value.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            If the Tango read fails.
+        """
+        try:
+            return self._attribute_dev.read_attribute(self._attr_name).w_value
+        except tango.DevFailed as df:
+            raise tango_to_PyAMLException(df)

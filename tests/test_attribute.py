@@ -17,72 +17,73 @@ class MockedROAttrDeviceProxy(MockedDeviceProxy):
         attr_ro_info = MockedAttributeInfoEx(name, tango._tango.AttrWriteType.READ)
         return attr_ro_info
 
+class TestAttributes:
 
-def test_attribute_get_set(config):
-    with patch("tango.DeviceProxy", new=MockedDeviceProxy):
-        attr = Attribute(config)
-        attr.set_and_wait(42.0)
-        assert attr.get() == 42.0
-        assert attr.readback() == 42.0
-        assert attr.readback().timestamp is not None
-        assert attr.readback().quality is pyaml.control.readback_value.Quality.VALID
+    def test_attribute_get_set(self, config):
+        with patch("tango.DeviceProxy", new=MockedDeviceProxy):
+            attr = Attribute(config)
+            attr.set_and_wait(42.0)
+            assert attr.get() == 42.0
+            assert attr.readback() == 42.0
+            assert attr.readback().timestamp is not None
+            assert attr.readback().quality is pyaml.control.readback_value.Quality.VALID
 
-        # Test infos
-        assert attr.unit() == "A"
-        assert attr.name() == "sys/tg_test/1/float_scalar"
-        assert attr.measure_name() == "float_scalar"
-
-
-def test_attribute_except(config):
-    with patch("tango.DeviceProxy", new=MockedReadExceptDeviceProxy):
-        attr = Attribute(config)
-        try:
-            attr.readback()
-            assert False
-        except pyaml.PyAMLException as ex:
-            assert type(ex)==pyaml.PyAMLException
-        except:
-            assert False
+            # Test infos
+            assert attr.unit() == "A"
+            assert attr.name() == "sys/tg_test/1/float_scalar"
+            assert attr.measure_name() == "float_scalar"
 
 
-def test_attribute_read_only(config):
-    with patch("tango.DeviceProxy", new=MockedROAttrDeviceProxy):
-        # Cannot create an attribute with a read-only tango attribute.
-        try:
-            Attribute(config)
-            assert False
-        except pyaml.PyAMLException as ex:
-            assert type(ex)==pyaml.PyAMLException
-        except:
-            assert False
-
-        # Read-only attributes cannot be sets.
-        try:
-            attr = AttributeReadOnly(config)
+    def test_attribute_except(self, config):
+        with patch("tango.DeviceProxy", new=MockedReadExceptDeviceProxy):
+            attr = Attribute(config)
             try:
-                attr.set(10)
+                attr.readback()
                 assert False
             except pyaml.PyAMLException as ex:
-                assert type(ex) == pyaml.PyAMLException
+                assert type(ex)==pyaml.PyAMLException
             except:
                 assert False
+
+
+    def test_attribute_read_only(self, config):
+        with patch("tango.DeviceProxy", new=MockedROAttrDeviceProxy):
+            # Cannot create an attribute with a read-only tango attribute.
             try:
-                attr.get()
+                Attribute(config)
                 assert False
             except pyaml.PyAMLException as ex:
-                assert type(ex) == pyaml.PyAMLException
+                assert type(ex)==pyaml.PyAMLException
             except:
                 assert False
-        except:
-            assert False
 
-def test_group_read_write(config_group):
-    with patch("tango.Group", new=MockedGroup):
-        try:
-            attr_list = AttributeList(config_group)
-            attr_list.set_and_wait(10)
-            vals = attr_list.readback()
-            for val in vals:
-                assert val == 10
-        except:
-            assert False
+            # Read-only attributes cannot be sets.
+            try:
+                attr = AttributeReadOnly(config)
+                try:
+                    attr.set(10)
+                    assert False
+                except pyaml.PyAMLException as ex:
+                    assert type(ex) == pyaml.PyAMLException
+                except:
+                    assert False
+                try:
+                    attr.get()
+                    assert False
+                except pyaml.PyAMLException as ex:
+                    assert type(ex) == pyaml.PyAMLException
+                except:
+                    assert False
+            except:
+                assert False
+
+    def test_group_read_write(self, config_group):
+        with patch("tango.Group", new=MockedGroup):
+            try:
+                attr_list = AttributeList(config_group)
+                attr_list.set_and_wait(10)
+                vals = attr_list.readback()
+                for val in vals:
+                    assert val == 10
+            except:
+                assert False

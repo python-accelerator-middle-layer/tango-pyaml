@@ -1,9 +1,12 @@
 import os
-import tango
+import logging
+
 from pydantic import BaseModel
 from pyaml.control.controlsystem import ControlSystem
 
 PYAMLCLASS : str = "TangoControlSystem"
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigModel(BaseModel):
@@ -21,7 +24,7 @@ class ConfigModel(BaseModel):
     """
     name: str
     tango_host: str
-    debug_level: int
+    debug_level: str=None
 
 
 class TangoControlSystem(ControlSystem):
@@ -57,4 +60,10 @@ class TangoControlSystem(ControlSystem):
         """
         if self._cfg.tango_host:
             os.environ["TANGO_HOST"] = self._cfg.tango_host
-        #tango.ApiUtil.instance().set_debug_level(self._cfg.debug_level)
+        if self._cfg.debug_level:
+            log_level = getattr(logging, self._cfg.debug_level, logging.WARNING)
+            logger.parent.setLevel(log_level)
+            logger.setLevel(log_level)
+
+        logger.log(logging.INFO, f"Tango control system binding for PyAML initialized with name '{self._cfg.name}'"
+                                 f" and TANGO_HOST={os.environ["TANGO_HOST"]}")

@@ -1,7 +1,11 @@
+import logging
+
 import pyaml
 from .attribute_list import AttributeList, ConfigModel
 
 PYAMLCLASS : str = "AttributeListReadOnly"
+
+logger = logging.getLogger(__name__)
 
 class AttributeListReadOnly(AttributeList):
     """

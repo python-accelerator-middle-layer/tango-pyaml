@@ -1,3 +1,5 @@
+import logging
+
 from numpy import array
 from pydantic import BaseModel
 from pyaml.control.deviceaccess import DeviceAccess
@@ -5,6 +7,8 @@ from pyaml.control.readback_value import Value, Quality
 import tango
 
 PYAMLCLASS : str = "AttributeList"
+
+logger = logging.getLogger(__name__)
 
 class ConfigModel(BaseModel):
     """
@@ -83,6 +87,7 @@ class AttributeList(DeviceAccess):
         value : float
             Value to write.
         """
+        logger.log(logging.DEBUG, f"Setting asynchronously list {self.name()} to {value}")
         [group.write_attribute_asynch(attr_name, value) for attr_name, group in self._tango_groups.items()]
 
 
@@ -95,6 +100,7 @@ class AttributeList(DeviceAccess):
         value : float
             Value to write.
         """
+        logger.log(logging.DEBUG, f"Setting list {self.name()} to {value}")
         [group.write_attribute(attr_name, value) for attr_name, group in self._tango_groups.items()]
 
 
@@ -128,6 +134,7 @@ class AttributeList(DeviceAccess):
         numpy.array
             Array of Value objects ordered as in configuration.
         """
+        logger.log(logging.DEBUG, f"Reading list {self.name()}")
         result = {}
         grp_vals = [group.read_attribute(attr_name) for attr_name, group in self._tango_groups.items()]
         for vals in grp_vals:

@@ -1,9 +1,13 @@
-from .tango_attribute import TangoAttribute, ConfigModel
+import logging
+
+from .attribute import Attribute, ConfigModel
 from .tango_pyaml_utils import *
 
 PYAMLCLASS : str = "AttributeReadOnly"
 
-class AttributeReadOnly(TangoAttribute):
+logger = logging.getLogger(__name__)
+
+class AttributeReadOnly(Attribute):
     """
     Read-only Tango attribute.
 
@@ -13,7 +17,7 @@ class AttributeReadOnly(TangoAttribute):
         Configuration model containing attribute path and unit.
     """
     def __init__(self, cfg: ConfigModel):
-        super().__init__(cfg)
+        super().__init__(cfg, False)
 
     def set(self, value: float):
         """
