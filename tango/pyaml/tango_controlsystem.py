@@ -3,6 +3,9 @@ import tango
 from pydantic import BaseModel
 from pyaml.control.controlsystem import ControlSystem
 
+PYAMLCLASS : str = "TangoControlSystem"
+
+
 class ConfigModel(BaseModel):
     """
     Configuration model for a Tango Control System.
