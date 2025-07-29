@@ -57,4 +57,4 @@ class TangoControlSystem(ControlSystem):
         """
         if self._cfg.tango_host:
             os.environ["TANGO_HOST"] = self._cfg.tango_host
-        tango.ApiUtil.instance().set_debug_level(self._cfg.debug_level)
+        #tango.ApiUtil.instance().set_debug_level(self._cfg.debug_level)
