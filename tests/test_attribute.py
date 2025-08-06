@@ -1,4 +1,5 @@
 import pyaml.control.readback_value
+import pytest
 
 from tango.pyaml.attribute_read_only import AttributeReadOnly
 from .mocked_device_proxy import *
@@ -37,53 +38,39 @@ class TestAttributes:
     def test_attribute_except(self, config):
         with patch("tango.DeviceProxy", new=MockedReadExceptDeviceProxy):
             attr = Attribute(config)
-            try:
+            with pytest.raises(pyaml.PyAMLException) as exc:
                 attr.readback()
-                assert False
-            except pyaml.PyAMLException as ex:
-                assert type(ex)==pyaml.PyAMLException
-            except:
-                assert False
+            assert exc is not None
 
 
     def test_attribute_read_only(self, config):
         with patch("tango.DeviceProxy", new=MockedROAttrDeviceProxy):
             # Cannot create an attribute with a read-only tango attribute.
-            try:
+            expected_message = 'Tango attribute sys/tg_test/1/float_scalar is not writable.'
+            with pytest.raises(pyaml.PyAMLException) as exc:
                 Attribute(config)
-                assert False
-            except pyaml.PyAMLException as ex:
-                assert type(ex)==pyaml.PyAMLException
-            except:
-                assert False
+            assert exc.value.message == expected_message
 
             # Read-only attributes cannot be sets.
-            try:
-                attr = AttributeReadOnly(config)
-                try:
-                    attr.set(10)
-                    assert False
-                except pyaml.PyAMLException as ex:
-                    assert type(ex) == pyaml.PyAMLException
-                except:
-                    assert False
-                try:
-                    attr.get()
-                    assert False
-                except pyaml.PyAMLException as ex:
-                    assert type(ex) == pyaml.PyAMLException
-                except:
-                    assert False
-            except:
-                assert False
+            attr = AttributeReadOnly(config)
+            with pytest.raises(pyaml.PyAMLException) as exc2:
+                attr.set(10)
+            assert exc2.value.message == expected_message
+
+            with pytest.raises(pyaml.PyAMLException) as exc3:
+                attr.get()
+            assert exc3.value.message == expected_message
 
     def test_group_read_write(self, config_group):
         with patch("tango.Group", new=MockedGroup):
-            try:
                 attr_list = AttributeList(config_group)
                 attr_list.set_and_wait(10)
                 vals = attr_list.readback()
                 for val in vals:
                     assert val == 10
-            except:
-                assert False
+
+    def test_unique_device(self, config):
+        with patch("tango.DeviceProxy", new=MockedDeviceProxy):
+            attr1 = Attribute(config)
+            attr2 = Attribute(config)
+            assert attr1._attribute_dev is attr2._attribute_dev

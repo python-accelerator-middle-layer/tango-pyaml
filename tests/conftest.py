@@ -4,6 +4,12 @@ import yaml
 from tango.pyaml.attribute_list import AttributeList, ConfigModel as GrpCM
 from tango.pyaml.attribute import ConfigModel as AttrCM
 from tango.pyaml.controlsystem import ConfigModel as CsCM
+from tango.pyaml.device_factory import TangoDeviceFactory
+
+
+@pytest.fixture(autouse=True)
+def clear_device_factory_cache():
+    TangoDeviceFactory._elements.clear()
 
 
 @pytest.fixture
