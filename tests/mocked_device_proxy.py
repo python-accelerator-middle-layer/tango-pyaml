@@ -70,8 +70,7 @@ class MockedDeviceProxy(MagicMock):
         return asynch_index
 
     def command_inout_reply(self, idx, timeout=None):
-        val = self.asynch_values[idx]
-        del self.asynch_values[idx]
+        val = self.asynch_values.pop(idx)
         return val
 
     def read_attribute(self, attr_name:str):
@@ -98,18 +97,17 @@ class MockedDeviceProxy(MagicMock):
         return asynch_index
 
     def read_attribute_reply(self, idx, extract_as=ExtractAs.Numpy, green_mode=None, wait=True) -> MockedDeviceAttribute:
-        val = self.asynch_values[idx]
-        del self.asynch_values[idx]
+        val = self.asynch_values.pop(idx)
         return val
 
     #def read_attribute_reply(self, idx, poll_timeout, extract_as=ExtractAs.Numpy, green_mode=None, wait=True) -> MockedDeviceAttribute:
     #    return self.read_attribute_reply(idx, extract_as, green_mode, wait)
 
-    def write_attributes_reply(self, idx, green_mode=None, wait=True):
-        del self.asynch_values[idx]
+    def write_attribute_reply(self, idx, green_mode=None, wait=True):
+        self.asynch_values.pop(idx)
 
-    def write_attributes_reply(self, idx, poll_timeout, green_mode=None, wait=True):
-        self.write_attributes_reply(idx, green_mode, wait)
+    # def write_attribute_reply(self, idx, poll_timeout, green_mode=None, wait=True):
+    #     self.write_attributes_reply(idx, green_mode, wait)
 
     def attribute_query(self, attr_name):
         return MockedAttributeInfoEx(attr_name)
