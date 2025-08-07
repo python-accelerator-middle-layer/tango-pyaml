@@ -26,5 +26,3 @@ class DeviceFactory:
 
     def clear(self):
         self._elements.clear()
-
-TangoDeviceFactory = DeviceFactory()
