@@ -2,6 +2,8 @@ import logging
 import os
 from tango.pyaml.controlsystem import TangoControlSystem
 
+from tango.pyaml.device_factory import DeviceFactory
+
 
 def test_init_cs(caplog, config_tango_cs):
     # Capture logs
@@ -17,3 +19,9 @@ def test_init_cs(caplog, config_tango_cs):
 
     # Check that the INFO init message was actually logged with correct values
     assert any(expected_message == record.message for record in caplog.records)
+
+def test_factory():
+    factory1 = DeviceFactory()
+    factory2 = DeviceFactory()
+
+    assert factory1 is factory2

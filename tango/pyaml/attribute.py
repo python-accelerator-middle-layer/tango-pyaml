@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from pyaml.control.deviceaccess import DeviceAccess
 from pyaml.control.readback_value import Value, Quality
 
-from .device_factory import TangoDeviceFactory
+from .device_factory import DeviceFactory
 from .tango_pyaml_utils import *
 
 PYAMLCLASS : str = "Attribute"
@@ -46,7 +46,7 @@ class Attribute(DeviceAccess):
         self._attribute_dev_name, self._attr_name = cfg.attribute.rsplit("/", 1)
         self._unit = cfg.unit
         try:
-            self._attribute_dev = TangoDeviceFactory.get_device(self._attribute_dev_name)
+            self._attribute_dev = DeviceFactory().get_device(self._attribute_dev_name)
         except tango.DevFailed as df:
             raise tango_to_PyAMLException(df)
 
