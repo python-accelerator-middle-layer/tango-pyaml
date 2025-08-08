@@ -2,6 +2,8 @@ import pyaml.control.readback_value
 import pytest
 
 from tango.pyaml.attribute_read_only import AttributeReadOnly
+
+from .mocked_control_system_initialized import MockedControlSystemInitialized
 from .mocked_device_proxy import *
 from .mocked_group import MockedGroup
 from unittest.mock import patch
@@ -21,7 +23,8 @@ class MockedROAttrDeviceProxy(MockedDeviceProxy):
 class TestAttributes:
 
     def test_attribute_get_set(self, config):
-        with patch("tango.DeviceProxy", new=MockedDeviceProxy):
+        with (patch("tango.DeviceProxy", new=MockedDeviceProxy),
+              patch("tango.pyaml.attribute.TangoControlSystem", new=MockedControlSystemInitialized)):
             attr = Attribute(config)
             attr.set_and_wait(42.0)
             assert attr.get() == 42.0
@@ -36,7 +39,8 @@ class TestAttributes:
 
 
     def test_attribute_except(self, config):
-        with patch("tango.DeviceProxy", new=MockedReadExceptDeviceProxy):
+        with (patch("tango.DeviceProxy", new=MockedReadExceptDeviceProxy),
+              patch("tango.pyaml.attribute.TangoControlSystem", new=MockedControlSystemInitialized)):
             attr = Attribute(config)
             with pytest.raises(pyaml.PyAMLException) as exc:
                 attr.readback()
@@ -44,7 +48,8 @@ class TestAttributes:
 
 
     def test_attribute_read_only(self, config):
-        with patch("tango.DeviceProxy", new=MockedROAttrDeviceProxy):
+        with (patch("tango.DeviceProxy", new=MockedROAttrDeviceProxy),
+              patch("tango.pyaml.attribute.TangoControlSystem", new=MockedControlSystemInitialized)):
             # Cannot create an attribute with a read-only tango attribute.
             expected_message = 'Tango attribute sys/tg_test/1/float_scalar is not writable.'
             with pytest.raises(pyaml.PyAMLException) as exc:
@@ -62,7 +67,8 @@ class TestAttributes:
             assert exc3.value.message == expected_message
 
     def test_group_read_write(self, config_group):
-        with patch("tango.Group", new=MockedGroup):
+        with (patch("tango.Group", new=MockedGroup),
+              patch("tango.pyaml.attribute_list.TangoControlSystem", new=MockedControlSystemInitialized)):
                 attr_list = AttributeList(config_group)
                 attr_list.set_and_wait(10)
                 vals = attr_list.readback()
@@ -70,7 +76,8 @@ class TestAttributes:
                     assert val == 10
 
     def test_unique_device(self, config):
-        with patch("tango.DeviceProxy", new=MockedDeviceProxy):
+        with (patch("tango.DeviceProxy", new=MockedDeviceProxy),
+              patch("tango.pyaml.attribute.TangoControlSystem", new=MockedControlSystemInitialized)):
             attr1 = Attribute(config)
             attr2 = Attribute(config)
             assert attr1._attribute_dev is attr2._attribute_dev
