@@ -55,6 +55,17 @@ def config_tango_cs():
 name: test_tango_cs
 tango_host: tangodb:10000
 debug_level: INFO
+lazy_devices: false
+"""
+    cfg_dict = yaml.safe_load(conf)
+    return CsCM(**cfg_dict)
+
+@pytest.fixture
+def config_tango_cs_lazy_default():
+    conf = """
+name: test_tango_cs
+tango_host: tangodb:10000
+debug_level: INFO
 """
     cfg_dict = yaml.safe_load(conf)
     return CsCM(**cfg_dict)

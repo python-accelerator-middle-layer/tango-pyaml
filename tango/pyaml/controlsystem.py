@@ -2,7 +2,7 @@ import os
 import logging
 from threading import Lock
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from pyaml.control.controlsystem import ControlSystem
 
 PYAMLCLASS : str = "TangoControlSystem"
@@ -27,6 +27,7 @@ class ConfigModel(BaseModel):
     name: str
     tango_host: str
     debug_level: str=None
+    lazy_devices: bool = True
 
 
 class TangoControlSystem(ControlSystem):
@@ -51,6 +52,7 @@ class TangoControlSystem(ControlSystem):
                 cls._instance._cfg = cfg
                 cls._instance._initializable_elements = []
                 cls._instance._initialized = False
+                cls._instance._lazy_devices = cfg.lazy_devices
             return cls._instance
 
     @classmethod
@@ -100,14 +102,43 @@ class TangoControlSystem(ControlSystem):
             logger.parent.setLevel(log_level)
             logger.setLevel(log_level)
 
+        """
+        Eagerly initializes registered elements only if *lazy_devices* is False.
+        When *lazy_devices* is True (default), initialization is deferred until
+        `warmup()` or first-use via `ensure_initialized()`.
+        """
+        if not self._cfg.lazy_devices:
+            self._do_initialize_all()
+        else:
+            logger.debug("init_cs(): lazy mode enabled; deferring initialization")
+
         self._initialized = True
-        for elem in self._initializable_elements:
-            elem.initialize()
-        self._initializable_elements.clear()
 
         logger.log(logging.INFO, f"Tango control system binding for PyAML initialized with name '{self._cfg.name}'"
                                  f" and TANGO_HOST={os.environ["TANGO_HOST"]}")
 
 
+    def _do_initialize_all(self) -> None:
+        # Initialize all registered elements exactly once
+        for elem in self._initializable_elements:
+            try:
+                elem.initialize()
+            except Exception as exc:  # pragma: no cover
+                logger.exception("Failed to initialize %r: %s", elem, exc)
+                raise
+        self._initializable_elements.clear()
+
+
     def add_initializable(self, initializable):
         self._initializable_elements.append(initializable)
+
+
+    def warmup(self) -> None:
+        """Explicitly switch to eager behavior and initialize now."""
+        with self._lock:
+            self._lazy_devices = False
+            self._do_initialize_all()
+
+    @property
+    def lazy_devices(self) -> bool:
+        return self._lazy_devices
