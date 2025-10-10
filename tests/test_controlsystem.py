@@ -56,3 +56,29 @@ def test_init_cs_attribute(config_tango_cs, config):
         tango_cs.init_cs()
         attr.set_and_wait(42.0)
         assert attr.get() == 42.0
+
+
+def test_laziness_init_cs_attribute(config_tango_cs_lazy_default, config):
+    tango_cs = TangoControlSystem(config_tango_cs_lazy_default)
+    with patch("tango.DeviceProxy", side_effect=MockedDeviceProxy) as mock_ctor:
+        attr = Attribute(config)
+        mock_ctor.assert_not_called()
+        tango_cs.init_cs()
+        mock_ctor.assert_not_called()
+        attr.set_and_wait(42.0)
+        mock_ctor.assert_called_once()
+        attr.set_and_wait(42.0)
+        mock_ctor.assert_called_once()
+        assert attr.get() == 42.0
+
+
+def test_laziness_init_cs_go_eager(config_tango_cs_lazy_default, config):
+    tango_cs = TangoControlSystem(config_tango_cs_lazy_default)
+    with patch("tango.DeviceProxy", side_effect=MockedDeviceProxy) as mock_ctor:
+        attr = Attribute(config)
+        mock_ctor.assert_not_called()
+        tango_cs.init_cs()
+        tango_cs.warmup()
+        mock_ctor.assert_called_once()
+        attr.set_and_wait(42.0)
+        assert attr.get() == 42.0

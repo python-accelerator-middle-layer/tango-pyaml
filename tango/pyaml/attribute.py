@@ -84,8 +84,7 @@ class Attribute(DeviceAccess, InitializableElement):
         pyaml.PyAMLException
             If the Tango write fails.
         """
-        if not self.is_initialized():
-            raise pyaml.PyAMLException(f"The attribute {self.name()} is not initialized.")
+        self._ensure_initialized()
         logger.log(logging.DEBUG, f"Setting asynchronously {self._cfg.attribute} to {value}")
         try:
             self._attribute_dev.write_attribute_asynch(self._attr_name, value)
@@ -107,8 +106,7 @@ class Attribute(DeviceAccess, InitializableElement):
         pyaml.PyAMLException
             If the Tango write fails.
         """
-        if not self.is_initialized():
-            raise pyaml.PyAMLException(f"The attribute {self.name()} is not initialized.")
+        self._ensure_initialized()
         logger.log(logging.DEBUG, f"Setting {self._cfg.attribute} to {value}")
         try:
             self._attribute_dev.write_attribute(self._attr_name, value)
@@ -129,8 +127,7 @@ class Attribute(DeviceAccess, InitializableElement):
         pyaml.PyAMLException
             If the Tango read fails.
         """
-        if not self.is_initialized():
-            raise pyaml.PyAMLException(f"The attribute {self.name()} is not initialized.")
+        self._ensure_initialized()
         logger.log(logging.DEBUG, f"Reading {self._cfg.attribute}")
         try:
             attr_value = self._attribute_dev.read_attribute(self._attr_name)
