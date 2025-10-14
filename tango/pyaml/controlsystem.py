@@ -92,7 +92,7 @@ class TangoControlSystem(ControlSystem):
         """
         if self._initialized:
             logger.log(logging.WARNING, f"Tango control system binding for PyAML was already initialized"
-                                        f" with name '{self._cfg.name}' and TANGO_HOST={os.environ["TANGO_HOST"]}")
+                                        f" with name '{self._cfg.name}' and TANGO_HOST={os.environ['TANGO_HOST']}")
             return
 
         if self._cfg.tango_host:
@@ -115,7 +115,7 @@ class TangoControlSystem(ControlSystem):
         self._initialized = True
 
         logger.log(logging.INFO, f"Tango control system binding for PyAML initialized with name '{self._cfg.name}'"
-                                 f" and TANGO_HOST={os.environ["TANGO_HOST"]}")
+                                 f" and TANGO_HOST={os.environ['TANGO_HOST']}")
 
 
     def _do_initialize_all(self) -> None:
