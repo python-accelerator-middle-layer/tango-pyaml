@@ -184,8 +184,7 @@ class Attribute(DeviceAccess, InitializableElement):
         pyaml.PyAMLException
             If the Tango read fails.
         """
-        if not self.is_initialized():
-            raise pyaml.PyAMLException(f"The attribute {self.name()} is not initialized.")
+        self._ensure_initialized()
         try:
             return self._attribute_dev.read_attribute(self._attr_name).w_value
         except tango.DevFailed as df:
