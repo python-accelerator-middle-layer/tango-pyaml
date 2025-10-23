@@ -83,6 +83,7 @@ class MultiAttribute(DeviceAccessList):
         asynch_call_ids = []
         # Read asynch
         for index, device in enumerate(self):
+            device._ensure_initialized()
             asynch_call_id = device._attribute_dev.read_attribute_asynch(device._attr_name)
             asynch_call_ids.append(asynch_call_id)
 
@@ -99,6 +100,7 @@ class MultiAttribute(DeviceAccessList):
 
         # Readback with asynch optim
         for index, device in enumerate(self):
+            device._ensure_initialized()
             asynch_call_id = device._attribute_dev.read_attribute_asynch(device._attr_name)
             asynch_call_ids.append(asynch_call_id)
 
