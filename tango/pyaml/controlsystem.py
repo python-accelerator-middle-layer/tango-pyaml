@@ -23,12 +23,20 @@ class ConfigModel(BaseModel):
         Tango host URL.
     debug_level : int
         Debug verbosity level.
+    lazy_devices: bool
+        Construct DeviceProxy when needed 
+    scalar_aggregator : str
+        Aggregator module for scalar values. If none specified, writings and readings of sclar value are serialized. 
+    vector_aggregator : str
+        Aggregator module for vecrors. If none specified, writings and readings of vector are serialized. 
+
     """
     name: str
     tango_host: str
     debug_level: str=None
     lazy_devices: bool = True
-
+    scalar_aggregator: str | None = "tango.pyaml.multi_attribute"
+    vector_aggregator: str | None = None
 
 class TangoControlSystem(ControlSystem):
     """
@@ -66,7 +74,7 @@ class TangoControlSystem(ControlSystem):
 
     def __init__(self, cfg: ConfigModel):
         super().__init__()
-
+        self._cfg = cfg
 
     def is_instance_initialized(self) -> bool:
         return self._initialized
@@ -82,6 +90,28 @@ class TangoControlSystem(ControlSystem):
             Name of the control system.
         """
         return self._cfg.name
+    
+    def scalar_aggregator(self) -> str | None:
+        """
+        Returns the module name used for handling aggregator of DeviceAccess
+
+        Returns
+        -------
+        str
+            Aggregator module name
+        """
+        return self._cfg.scalar_aggregator
+
+    def vector_aggregator(self) -> str | None:
+        """
+        Returns the module name used for handling aggregator of DeviceVectorAccess
+        
+        Returns
+        -------
+        str
+            Aggregator module name
+        """
+        return self._cfg.vector_aggregator
 
 
     def init_cs(self):
