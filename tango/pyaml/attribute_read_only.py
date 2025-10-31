@@ -42,12 +42,4 @@ class AttributeReadOnly(Attribute):
         raise pyaml.PyAMLException(f"Tango attribute {self._cfg.attribute} is not writable.")
 
     def get(self) -> float:
-        """
-        Disallowed get operation.
-
-        Raises
-        ------
-        pyaml.PyAMLException
-            Always raised because the attribute is read-only.
-        """
-        raise pyaml.PyAMLException(f"Tango attribute {self._cfg.attribute} is not writable.")
+        return self.readback().value

@@ -70,6 +70,7 @@ class MultiAttribute(DeviceAccessList):
         asynch_call_ids = []
         # Set part
         for index, device in enumerate(self):
+            device._ensure_initialized()
             asynch_call_id = device._attribute_dev.write_attribute_asynch(device._attr_name, value[index])
             asynch_call_ids.append(asynch_call_id)
 
@@ -90,7 +91,10 @@ class MultiAttribute(DeviceAccessList):
         # Wait to read the set_point, ie the write part in a tango attribute.
         for index, call_id in enumerate(asynch_call_ids):
             dev_attr = self[index]._attribute_dev.read_attribute_reply(call_id)
-            values.append(dev_attr.w_value)
+            if self[index].is_writable():
+                values.append(dev_attr.w_value)
+            else:
+                values.append(dev_attr.value)
 
         return np.array(values)
 

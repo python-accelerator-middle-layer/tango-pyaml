@@ -69,7 +69,10 @@ class Attribute(DeviceAccess, InitializableElement):
                                           tango._tango.AttrWriteType.WRITE,
                                           tango._tango.AttrWriteType.READ_WITH_WRITE]:
                 raise pyaml.PyAMLException(f"Tango attribute {self._cfg.attribute} is not writable.")
-
+            
+    def is_writable(self):
+        return self._writable
+            
     def set(self, value: float):
         """
         Write a value asynchronously to the Tango attribute.
