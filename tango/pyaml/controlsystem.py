@@ -4,6 +4,7 @@ from threading import Lock
 
 from pydantic import BaseModel, field_validator
 from pyaml.control.controlsystem import ControlSystem
+from .device_factory import DeviceFactory
 
 PYAMLCLASS : str = "TangoControlSystem"
 
@@ -29,7 +30,8 @@ class ConfigModel(BaseModel):
         Aggregator module for scalar values. If none specified, writings and readings of sclar value are serialized. 
     vector_aggregator : str
         Aggregator module for vecrors. If none specified, writings and readings of vector are serialized. 
-
+    timeout_ms : int
+        Device timeout in milli seconds.
     """
     name: str
     tango_host: str
@@ -37,6 +39,7 @@ class ConfigModel(BaseModel):
     lazy_devices: bool = True
     scalar_aggregator: str | None = "tango.pyaml.multi_attribute"
     vector_aggregator: str | None = None
+    timeout_ms: int = 3000
 
 class TangoControlSystem(ControlSystem):
     """
@@ -61,6 +64,7 @@ class TangoControlSystem(ControlSystem):
                 cls._instance._initializable_elements = []
                 cls._instance._initialized = False
                 cls._instance._lazy_devices = cfg.lazy_devices
+                DeviceFactory().set_timeout_ms(cfg.timeout_ms)
             return cls._instance
 
     @classmethod

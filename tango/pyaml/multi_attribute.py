@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from pyaml.control.deviceaccesslist import DeviceAccessList
 
 from .attribute import Attribute, ConfigModel as AttrConfig
+from .device_factory import DeviceFactory
 
 PYAMLCLASS : str = "MultiAttribute"
 
@@ -61,13 +62,8 @@ class MultiAttribute(DeviceAccessList):
     def set(self, value: npt.NDArray[np.float64]):
         if len(value)!=len(self):
             raise pyaml.PyAMLException(f"Size of value ({len(value)} do not match the number of managed devices ({len(self)})")
-        for index, device in enumerate(self):
-            device.set(value[index])
-
-    def set_and_wait(self, value: npt.NDArray[np.float64]):
-        if len(value)!=len(self):
-            raise pyaml.PyAMLException(f"Size of value ({len(value)} do not match the number of managed devices ({len(self)})")
         asynch_call_ids = []
+        timeout = DeviceFactory().get_timeout_ms()
         # Set part
         for index, device in enumerate(self):
             device._ensure_initialized()
@@ -76,12 +72,15 @@ class MultiAttribute(DeviceAccessList):
 
         # Wait part
         for index, call_id in enumerate(asynch_call_ids):
-            self[index]._attribute_dev.write_attribute_reply(call_id)
+            self[index]._attribute_dev.write_attribute_reply(call_id,timeout)
 
+    def set_and_wait(self, value: npt.NDArray[np.float64]):
+        raise NotImplemented("Not implemented yet.")
 
     def get(self) -> npt.NDArray[np.float64]:
         values = []
         asynch_call_ids = []
+        timeout = DeviceFactory().get_timeout_ms()
         # Read asynch
         for index, device in enumerate(self):
             device._ensure_initialized()
@@ -90,7 +89,7 @@ class MultiAttribute(DeviceAccessList):
 
         # Wait to read the set_point, ie the write part in a tango attribute.
         for index, call_id in enumerate(asynch_call_ids):
-            dev_attr = self[index]._attribute_dev.read_attribute_reply(call_id)
+            dev_attr = self[index]._attribute_dev.read_attribute_reply(call_id,timeout)
             if self[index].is_writable():
                 values.append(dev_attr.w_value)
             else:
@@ -101,7 +100,7 @@ class MultiAttribute(DeviceAccessList):
     def readback(self) -> np.array:
         values = []
         asynch_call_ids = []
-
+        timeout = DeviceFactory().get_timeout_ms()
         # Readback with asynch optim
         for index, device in enumerate(self):
             device._ensure_initialized()
@@ -110,7 +109,7 @@ class MultiAttribute(DeviceAccessList):
 
         # Wait to read the value
         for index, call_id in enumerate(asynch_call_ids):
-            dev_attr = self[index]._attribute_dev.read_attribute_reply(call_id)
+            dev_attr = self[index]._attribute_dev.read_attribute_reply(call_id,timeout)
             values.append(dev_attr.value)
 
         return np.array(values)
