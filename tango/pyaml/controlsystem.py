@@ -176,3 +176,6 @@ class TangoControlSystem(ControlSystem):
     @property
     def lazy_devices(self) -> bool:
         return self._lazy_devices
+
+    def __repr__(self):
+       return repr(self._cfg).replace("ConfigModel",self.__class__.__name__)

@@ -192,3 +192,6 @@ class Attribute(DeviceAccess, InitializableElement):
             return self._attribute_dev.read_attribute(self._attr_name).w_value
         except tango.DevFailed as df:
             raise tango_to_PyAMLException(df)
+    
+    def __repr__(self):
+       return repr(self._cfg).replace("ConfigModel",self.__class__.__name__)

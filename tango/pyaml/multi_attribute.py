@@ -119,3 +119,6 @@ class MultiAttribute(DeviceAccessList):
             return self._cfg.unit
         else:
             return ""
+
+    def __repr__(self):
+       return repr(self._cfg).replace("ConfigModel",self.__class__.__name__)
