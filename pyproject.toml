@@ -12,8 +12,9 @@ exclude = [
   "/tests",
 ]
 
+# Install tango-pyaml as a sub module of tango
 [tool.hatch.build.targets.wheel]
-packages = ["tango-pyaml"]
+packages = ["tango"]
 
 [project]
 name = "tango-pyaml"
@@ -53,8 +54,6 @@ dev = [
     "mypy",                 # Typage statique (optionnel)
     "ipython",              # Débogage interactif
 ]
-[tool.setuptools.packages.find]
-include = ["tango.*"]
 
 [project.urls]
 Homepage = "https://github.com/python-accelerator-middle-layer/tango-pyaml"
