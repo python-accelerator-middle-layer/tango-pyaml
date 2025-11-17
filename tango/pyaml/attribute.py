@@ -62,10 +62,11 @@ class Attribute(DeviceAccess, InitializableElement):
             self._attribute_dev = DeviceFactory().get_device(self._attribute_dev_name)
         except tango.DevFailed as df:
             raise tango_to_PyAMLException(df)
+        
+        self._attr_config = self._attribute_dev.get_attribute_config(self._attr_name, wait=True)
 
         if self._writable:
-            attr_info = self._attribute_dev.attribute_query(self._attr_name)
-            if attr_info.writable not in [tango._tango.AttrWriteType.READ_WRITE,
+            if  self._attr_config .writable not in [tango._tango.AttrWriteType.READ_WRITE,
                                           tango._tango.AttrWriteType.WRITE,
                                           tango._tango.AttrWriteType.READ_WITH_WRITE]:
                 raise pyaml.PyAMLException(f"Tango attribute {self._cfg.attribute} is not writable.")
