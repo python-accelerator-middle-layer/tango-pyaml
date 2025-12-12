@@ -87,10 +87,6 @@ class TangoControlSystem(ControlSystem):
                 newDevs.append(None)
         return newDevs
 
-    @classmethod
-    def is_initialized(cls):
-        return cls._instance is not None and cls._instance.is_instance_initialized()
-
     def name(self) -> str:
         """
         Return the name of the control system.
