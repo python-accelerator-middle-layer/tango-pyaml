@@ -51,7 +51,6 @@ class Attribute(DeviceAccess, InitializableElement):
         super().initialize()
         try:
             self._attribute_dev_name, self._attr_name = self._cfg.attribute.rsplit("/", 1)
-            self._unit = self._cfg.unit
             self._attribute_dev = DeviceFactory().get_device(self._attribute_dev_name)
         except tango.DevFailed as df:
             raise tango_to_PyAMLException(df)
@@ -143,7 +142,7 @@ class Attribute(DeviceAccess, InitializableElement):
         str
             The unit string.
         """
-        return self._unit
+        return self._cfg.unit
 
     def name(self) -> str:
         """
@@ -165,7 +164,7 @@ class Attribute(DeviceAccess, InitializableElement):
         str
             The attribute name (e.g., 'current').
         """
-        return self._attr_name
+        return self._cfg.attribute.rsplit('/', 1)[1]
 
     def get(self) -> float:
         """
