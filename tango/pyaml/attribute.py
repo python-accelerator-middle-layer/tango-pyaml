@@ -44,21 +44,14 @@ class Attribute(DeviceAccess, InitializableElement):
     def __init__(self, cfg: ConfigModel, writable=True):
         super().__init__()
         self._cfg = cfg
-
-        self._attribute_dev_name, self._attr_name = cfg.attribute.rsplit("/", 1)
-        self._unit = cfg.unit
         self._writable = writable
         self._attribute_dev:tango.DeviceProxy = None
-
-        if TangoControlSystem.is_initialized():
-            self.initialize()
-        else:
-            TangoControlSystem.get_instance().add_initializable(self)
-
 
     def initialize(self):
         super().initialize()
         try:
+            self._attribute_dev_name, self._attr_name = self._cfg.attribute.rsplit("/", 1)
+            self._unit = self._cfg.unit
             self._attribute_dev = DeviceFactory().get_device(self._attribute_dev_name)
         except tango.DevFailed as df:
             raise tango_to_PyAMLException(df)

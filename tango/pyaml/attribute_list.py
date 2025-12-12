@@ -7,7 +7,6 @@ from pyaml.control.deviceaccess import DeviceAccess
 from pyaml.control.readback_value import Value, Quality
 import tango
 
-from .controlsystem import TangoControlSystem
 from .initializable_element import InitializableElement
 
 PYAMLCLASS: str = "AttributeList"
@@ -55,11 +54,6 @@ class AttributeList(DeviceAccess, InitializableElement):
                 self._attr_dev[attr_name] = []
             if attribute_dev_name not in self._attr_dev[attr_name]:
                 self._attr_dev[attr_name].append(attribute_dev_name)
-
-        if TangoControlSystem.is_initialized():
-            self.initialize()
-        else:
-            TangoControlSystem.get_instance().add_initializable(self)
 
     def initialize(self):
         super().initialize()
