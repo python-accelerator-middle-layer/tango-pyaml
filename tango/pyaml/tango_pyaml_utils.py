@@ -1,6 +1,12 @@
 import tango
 import pyaml
 
+def to_float_or_none(s):
+    try:
+        return float(s)
+    except (TypeError, ValueError):
+        return None
+
 
 def tango_to_PyAMLException(df: tango.DevFailed) -> pyaml.PyAMLException:
     """

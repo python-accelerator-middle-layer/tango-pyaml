@@ -8,6 +8,7 @@ from pyaml.control.readback_value import Value, Quality
 import tango
 
 from .initializable_element import InitializableElement
+from .tango_pyaml_utils import to_float_or_none
 
 PYAMLCLASS: str = "AttributeList"
 
@@ -166,3 +167,32 @@ class AttributeList(DeviceAccess, InitializableElement):
             Unit string.
         """
         return self._cfg.unit
+
+    def get_range(self) -> list[float]:
+        attr_range: list[float] = [None, None]
+        if self._cfg.range is not None:
+            attr_range[0] = self._cfg.range[0] if self._cfg.range[0] is not None else None
+            attr_range[1] = self._cfg.range[1] if self._cfg.range[1] is not None else None
+        else:
+            self._ensure_initialized()
+            devices:list[tango.DeviceProxy] = []
+            [devices.extend(group.get_device_list()) for group in self._tango_groups.values()]
+            attr_confs = [dev.get_attribute_config() for dev in devices]
+            attr_range: list[float] = []
+            for conf in attr_confs:
+                attr_range.append(to_float_or_none(conf.min_value))
+                attr_range.append(to_float_or_none(conf.max_value))
+
+        return attr_range
+
+    def check_device_availability(self) -> bool:
+        available = True
+        try:
+            self._ensure_initialized()
+            [group.ping() for group in self._tango_groups.values()]
+        except tango.DevFailed | pyaml.PyAMLException:
+            available = False
+        return available
+
+    def __repr__(self):
+       return repr(self._cfg).replace("ConfigModel",self.__class__.__name__)

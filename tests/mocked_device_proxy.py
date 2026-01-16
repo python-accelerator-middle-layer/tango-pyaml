@@ -6,9 +6,11 @@ from tango import ExtractAs
 
 
 class MockedAttributeInfoEx:
-    def __init__(self, name, writable = tango._tango.AttrWriteType.READ_WRITE):
+    def __init__(self, name, writable = tango._tango.AttrWriteType.READ_WRITE, min_value:str = "", max_value:str = ""):
         self.name = name
         self.writable = writable
+        self.min_value = min_value
+        self.max_value = max_value
 
 
 class MockedDeviceAttribute:
@@ -112,7 +114,13 @@ class MockedDeviceProxy(MagicMock):
     def attribute_query(self, attr_name):
         return MockedAttributeInfoEx(attr_name)
 
+    def get_attribute_config(self, attr_name, wait=True):
+        return self.attribute_query(attr_name)
+
     def attribute_list_query(self):
+        pass
+
+    def set_timeout_millis(self, timeout:float):
         pass
 
     def ping(self, green_mode=None, wait=True, timeout=True) -> int:

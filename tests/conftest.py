@@ -24,6 +24,26 @@ unit: "A"
     return AttrCM(**cfg_dict)
 
 @pytest.fixture
+def config_range():
+    conf = """
+attribute: "sys/tg_test/1/float_scalar"
+unit: "A"
+range: [-15,15]
+"""
+    cfg_dict = yaml.safe_load(conf)
+    return AttrCM(**cfg_dict)
+
+@pytest.fixture
+def config_range_with_null():
+    conf = """
+attribute: "sys/tg_test/1/float_scalar"
+unit: "A"
+range: [0,null]
+"""
+    cfg_dict = yaml.safe_load(conf)
+    return AttrCM(**cfg_dict)
+
+@pytest.fixture
 def config_group():
     conf = """
 attributes:
