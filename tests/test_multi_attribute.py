@@ -13,11 +13,11 @@ class TestMultiAttributes:
 
     def test_multi_read_write(self, config_multi):
         with (patch("tango.DeviceProxy", new=MockedDeviceProxy),
-              patch("tango.pyaml.attribute.TangoControlSystem", new=MockedControlSystemInitialized)):
+              patch("tango.pyaml.controlsystem.TangoControlSystem", new=MockedControlSystemInitialized)):
                 attr_list = MultiAttribute(config_multi)
                 rand = random.Random()
                 values = [rand.random() for _ in range(4)]
-                attr_list.set_and_wait(values)
+                attr_list.set(values)
                 vals = attr_list.readback()
                 assert len(vals)==len(values)
                 for index, val in enumerate(vals):

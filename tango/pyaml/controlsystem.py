@@ -87,6 +87,9 @@ class TangoControlSystem(ControlSystem):
                 newDevs.append(None)
         return newDevs
 
+    def attach_array(self, dev: list[DeviceAccess]) -> list[DeviceAccess]:
+        pass
+
     def name(self) -> str:
         """
         Return the name of the control system.
