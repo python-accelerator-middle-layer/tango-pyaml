@@ -67,7 +67,7 @@ class MultiAttribute(DeviceAccessList):
         # Set part
         for index, device in enumerate(self):
             device._ensure_initialized()
-            asynch_call_id = device._attribute_dev.write_attribute_asynch(device._attr_config, value[index])
+            asynch_call_id = device._attribute_dev.write_attribute_asynch(device._attr_name, value[index])
             asynch_call_ids.append(asynch_call_id)
 
         # Wait part
