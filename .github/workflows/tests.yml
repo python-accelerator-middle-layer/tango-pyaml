@@ -33,7 +33,7 @@ jobs:
         pip install accelerator-toolbox
         pip install matplotlib
         pip install h5py
-        pip install pyaml
+        pip install accelerator-middle-layer
         pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with flake8
