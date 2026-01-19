@@ -20,7 +20,7 @@ class MockedReadExceptDeviceProxy(MockedDeviceProxy):
 
 class MockedROAttrDeviceProxy(MockedDeviceProxy):
     def attribute_query(self, name):
-        attr_ro_info = MockedAttributeInfoEx(name, tango._tango.AttrWriteType.READ)
+        attr_ro_info = MockedAttributeInfoEx(name, tango.AttrWriteType.READ)
         return attr_ro_info
 
 

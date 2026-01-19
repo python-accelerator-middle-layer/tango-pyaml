@@ -7,7 +7,7 @@ class MockedAttributeInfoEx:
     def __init__(
         self,
         name,
-        writable=tango._tango.AttrWriteType.READ_WRITE,
+        writable=tango.AttrWriteType.READ_WRITE,
         min_value: str = "",
         max_value: str = "",
     ):

@@ -8,7 +8,7 @@ from .mocked_control_system_initialized import MockedControlSystemInitialized
 class MockedMinMaxAttrDeviceProxy(MockedDeviceProxy):
     def attribute_query(self, name):
         attr_info = MockedAttributeInfoEx(
-            name, tango._tango.AttrWriteType.READ_WRITE, "-10", "10"
+            name, tango.AttrWriteType.READ_WRITE, "-10", "10"
         )
         return attr_info
 
@@ -16,7 +16,7 @@ class MockedMinMaxAttrDeviceProxy(MockedDeviceProxy):
 class MockedMinAttrDeviceProxy(MockedDeviceProxy):
     def attribute_query(self, name):
         attr_info = MockedAttributeInfoEx(
-            name, tango._tango.AttrWriteType.READ_WRITE, "-10", ""
+            name, tango.AttrWriteType.READ_WRITE, "-10", ""
         )
         return attr_info
 

@@ -74,9 +74,9 @@ class Attribute(DeviceAccess, InitializableElement):
 
         if self._writable:
             if self._attr_config.writable not in [
-                tango._tango.AttrWriteType.READ_WRITE,
-                tango._tango.AttrWriteType.WRITE,
-                tango._tango.AttrWriteType.READ_WITH_WRITE,
+                tango.AttrWriteType.READ_WRITE,
+                tango.AttrWriteType.WRITE,
+                tango.AttrWriteType.READ_WITH_WRITE,
             ]:
                 raise pyaml.PyAMLException(
                     f"Tango attribute {self._cfg.attribute} is not writable."
