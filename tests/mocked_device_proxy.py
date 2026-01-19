@@ -2,8 +2,6 @@ import tango
 import numpy as np
 from unittest.mock import MagicMock
 
-from tango import ExtractAs
-
 
 class MockedAttributeInfoEx:
     def __init__(
@@ -105,12 +103,12 @@ class MockedDeviceProxy(MagicMock):
         return asynch_index
 
     def read_attribute_reply(
-        self, idx, extract_as=ExtractAs.Numpy, green_mode=None, wait=True
+        self, idx, extract_as=None, green_mode=None, wait=True
     ) -> MockedDeviceAttribute:
         val = self.asynch_values.pop(idx)
         return val
 
-    # def read_attribute_reply(self, idx, poll_timeout, extract_as=ExtractAs.Numpy, green_mode=None, wait=True) -> MockedDeviceAttribute:
+    # def read_attribute_reply(self, idx, poll_timeout, extract_as=None, green_mode=None, wait=True) -> MockedDeviceAttribute:
     #    return self.read_attribute_reply(idx, extract_as, green_mode, wait)
 
     def write_attribute_reply(self, idx, green_mode=None, wait=True):
