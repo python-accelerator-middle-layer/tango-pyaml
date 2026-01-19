@@ -10,5 +10,5 @@ if os.path.exists(config_file):
 
 logger = logging.getLogger("tango.pyaml")
 level = os.getenv("TANGO_PYAML_LOG_LEVEL", "").upper()
-if len(level)>0:
+if len(level) > 0:
     logger.setLevel(getattr(logging, level, logging.WARNING))

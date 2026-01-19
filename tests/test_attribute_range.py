@@ -1,4 +1,3 @@
-import pytest
 from .mocked_device_proxy import *
 
 from unittest.mock import patch
@@ -8,18 +7,28 @@ from .mocked_control_system_initialized import MockedControlSystemInitialized
 
 class MockedMinMaxAttrDeviceProxy(MockedDeviceProxy):
     def attribute_query(self, name):
-        attr_info = MockedAttributeInfoEx(name, tango._tango.AttrWriteType.READ_WRITE, "-10", "10")
+        attr_info = MockedAttributeInfoEx(
+            name, tango._tango.AttrWriteType.READ_WRITE, "-10", "10"
+        )
         return attr_info
+
 
 class MockedMinAttrDeviceProxy(MockedDeviceProxy):
     def attribute_query(self, name):
-        attr_info = MockedAttributeInfoEx(name, tango._tango.AttrWriteType.READ_WRITE, "-10", "")
+        attr_info = MockedAttributeInfoEx(
+            name, tango._tango.AttrWriteType.READ_WRITE, "-10", ""
+        )
         return attr_info
 
 
 def test_attribute_range_by_conf(config_range):
-    with (patch("tango.DeviceProxy", new=MockedDeviceProxy),
-          patch("tango.pyaml.controlsystem.TangoControlSystem", new=MockedControlSystemInitialized)):
+    with (
+        patch("tango.DeviceProxy", new=MockedDeviceProxy),
+        patch(
+            "tango.pyaml.controlsystem.TangoControlSystem",
+            new=MockedControlSystemInitialized,
+        ),
+    ):
         attr = Attribute(config_range)
 
         attr_range = attr.get_range()
@@ -29,8 +38,13 @@ def test_attribute_range_by_conf(config_range):
 
 
 def test_attribute_range_by_conf_with_null(config_range_with_null):
-    with (patch("tango.DeviceProxy", new=MockedDeviceProxy),
-          patch("tango.pyaml.controlsystem.TangoControlSystem", new=MockedControlSystemInitialized)):
+    with (
+        patch("tango.DeviceProxy", new=MockedDeviceProxy),
+        patch(
+            "tango.pyaml.controlsystem.TangoControlSystem",
+            new=MockedControlSystemInitialized,
+        ),
+    ):
         attr = Attribute(config_range_with_null)
 
         attr_range = attr.get_range()
@@ -40,8 +54,13 @@ def test_attribute_range_by_conf_with_null(config_range_with_null):
 
 
 def test_attribute_range_by_device(config):
-    with (patch("tango.DeviceProxy", new=MockedMinMaxAttrDeviceProxy),
-          patch("tango.pyaml.controlsystem.TangoControlSystem", new=MockedControlSystemInitialized)):
+    with (
+        patch("tango.DeviceProxy", new=MockedMinMaxAttrDeviceProxy),
+        patch(
+            "tango.pyaml.controlsystem.TangoControlSystem",
+            new=MockedControlSystemInitialized,
+        ),
+    ):
         attr = Attribute(config)
 
         attr_range = attr.get_range()
@@ -51,8 +70,13 @@ def test_attribute_range_by_device(config):
 
 
 def test_attribute_range_by_device_min_only(config):
-    with (patch("tango.DeviceProxy", new=MockedMinAttrDeviceProxy),
-          patch("tango.pyaml.controlsystem.TangoControlSystem", new=MockedControlSystemInitialized)):
+    with (
+        patch("tango.DeviceProxy", new=MockedMinAttrDeviceProxy),
+        patch(
+            "tango.pyaml.controlsystem.TangoControlSystem",
+            new=MockedControlSystemInitialized,
+        ),
+    ):
         attr = Attribute(config)
 
         attr_range = attr.get_range()

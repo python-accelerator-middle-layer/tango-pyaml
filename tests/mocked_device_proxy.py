@@ -6,7 +6,13 @@ from tango import ExtractAs
 
 
 class MockedAttributeInfoEx:
-    def __init__(self, name, writable = tango._tango.AttrWriteType.READ_WRITE, min_value:str = "", max_value:str = ""):
+    def __init__(
+        self,
+        name,
+        writable=tango._tango.AttrWriteType.READ_WRITE,
+        min_value: str = "",
+        max_value: str = "",
+    ):
         self.name = name
         self.writable = writable
         self.min_value = min_value
@@ -21,7 +27,7 @@ class MockedDeviceAttribute:
         self.quality = tango.AttrQuality.ATTR_VALID
         self.time = tango.TimeVal.now()
         if isinstance(value, np.ndarray):
-            if len(value.shape)==1:
+            if len(value.shape) == 1:
                 self.data_format = tango.AttrDataFormat.SPECTRUM
                 self.dim_x = value.shape[0]
                 self.dim_y = 0
@@ -49,7 +55,7 @@ class MockedDeviceProxy(MagicMock):
         self.device_name = device_name
         self.values = {
             "state": MockedDeviceAttribute("state", tango.DevState.ON),
-            "status": MockedDeviceAttribute("status", "")
+            "status": MockedDeviceAttribute("status", ""),
         }
         self.asynch_values = {}
 
@@ -62,10 +68,10 @@ class MockedDeviceProxy(MagicMock):
     def status(self) -> str:
         return self.read_attribute("status").value
 
-    def command_inout(self, cmd_name, cmd_param = None):
+    def command_inout(self, cmd_name, cmd_param=None):
         return None
 
-    def command_inout_asynch(self, cmd_name, cmd_param = None, forget = False):
+    def command_inout_asynch(self, cmd_name, cmd_param=None, forget=False):
         asynch_index = max(self.asynch_values.keys()) + 1
         if not forget:
             self.asynch_values[asynch_index] = self.command_inout(cmd_name, cmd_param)
@@ -75,7 +81,7 @@ class MockedDeviceProxy(MagicMock):
         val = self.asynch_values.pop(idx)
         return val
 
-    def read_attribute(self, attr_name:str):
+    def read_attribute(self, attr_name: str):
         if attr_name not in self.values.keys():
             return MockedDeviceAttribute(attr_name, None)
         return self.values[attr_name]
@@ -85,24 +91,26 @@ class MockedDeviceProxy(MagicMock):
 
     def read_attribute_asynch(self, attr_name) -> int:
         asynch_index = 0
-        if len(self.asynch_values)>0:
+        if len(self.asynch_values) > 0:
             asynch_index = max(self.asynch_values.keys()) + 1
         self.asynch_values[asynch_index] = self.read_attribute(attr_name)
         return asynch_index
 
     def write_attribute_asynch(self, attr_name, value) -> int:
         asynch_index = 0
-        if len(self.asynch_values)>0:
+        if len(self.asynch_values) > 0:
             asynch_index = max(self.asynch_values.keys()) + 1
         self.write_attribute(attr_name, value)
         self.asynch_values[asynch_index] = None
         return asynch_index
 
-    def read_attribute_reply(self, idx, extract_as=ExtractAs.Numpy, green_mode=None, wait=True) -> MockedDeviceAttribute:
+    def read_attribute_reply(
+        self, idx, extract_as=ExtractAs.Numpy, green_mode=None, wait=True
+    ) -> MockedDeviceAttribute:
         val = self.asynch_values.pop(idx)
         return val
 
-    #def read_attribute_reply(self, idx, poll_timeout, extract_as=ExtractAs.Numpy, green_mode=None, wait=True) -> MockedDeviceAttribute:
+    # def read_attribute_reply(self, idx, poll_timeout, extract_as=ExtractAs.Numpy, green_mode=None, wait=True) -> MockedDeviceAttribute:
     #    return self.read_attribute_reply(idx, extract_as, green_mode, wait)
 
     def write_attribute_reply(self, idx, green_mode=None, wait=True):
@@ -120,7 +128,7 @@ class MockedDeviceProxy(MagicMock):
     def attribute_list_query(self):
         pass
 
-    def set_timeout_millis(self, timeout:float):
+    def set_timeout_millis(self, timeout: float):
         pass
 
     def ping(self, green_mode=None, wait=True, timeout=True) -> int:

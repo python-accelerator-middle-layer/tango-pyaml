@@ -3,9 +3,10 @@ import logging
 from .attribute import Attribute, ConfigModel
 from .tango_pyaml_utils import *
 
-PYAMLCLASS : str = "AttributeReadOnly"
+PYAMLCLASS: str = "AttributeReadOnly"
 
 logger = logging.getLogger(__name__)
+
 
 class AttributeReadOnly(Attribute):
     """
@@ -16,6 +17,7 @@ class AttributeReadOnly(Attribute):
     cfg : ConfigModel
         Configuration model containing attribute path and unit.
     """
+
     def __init__(self, cfg: ConfigModel):
         super().__init__(cfg, False)
 
@@ -28,7 +30,9 @@ class AttributeReadOnly(Attribute):
         pyaml.PyAMLException
             Always raised because the attribute is read-only.
         """
-        raise pyaml.PyAMLException(f"Tango attribute {self._cfg.attribute} is not writable.")
+        raise pyaml.PyAMLException(
+            f"Tango attribute {self._cfg.attribute} is not writable."
+        )
 
     def set_and_wait(self, value: float):
         """
@@ -39,7 +43,9 @@ class AttributeReadOnly(Attribute):
         pyaml.PyAMLException
             Always raised because the attribute is read-only.
         """
-        raise pyaml.PyAMLException(f"Tango attribute {self._cfg.attribute} is not writable.")
+        raise pyaml.PyAMLException(
+            f"Tango attribute {self._cfg.attribute} is not writable."
+        )
 
     def get(self) -> float:
         return self.readback().value

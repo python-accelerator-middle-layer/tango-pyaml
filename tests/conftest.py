@@ -1,7 +1,7 @@
 import pytest
 import yaml
 
-from tango.pyaml.attribute_list import AttributeList, ConfigModel as GrpCM
+from tango.pyaml.attribute_list import ConfigModel as GrpCM
 from tango.pyaml.attribute import ConfigModel as AttrCM
 from tango.pyaml.multi_attribute import ConfigModel as MultiAttrCM
 from tango.pyaml.controlsystem import ConfigModel as CsCM, TangoControlSystem
@@ -23,6 +23,7 @@ unit: "A"
     cfg_dict = yaml.safe_load(conf)
     return AttrCM(**cfg_dict)
 
+
 @pytest.fixture
 def config_range():
     conf = """
@@ -33,6 +34,7 @@ range: [-15,15]
     cfg_dict = yaml.safe_load(conf)
     return AttrCM(**cfg_dict)
 
+
 @pytest.fixture
 def config_range_with_null():
     conf = """
@@ -42,6 +44,7 @@ range: [0,null]
 """
     cfg_dict = yaml.safe_load(conf)
     return AttrCM(**cfg_dict)
+
 
 @pytest.fixture
 def config_group():
@@ -56,6 +59,7 @@ unit: "A"
     cfg_dict = yaml.safe_load(conf)
     return GrpCM(**cfg_dict)
 
+
 @pytest.fixture
 def config_multi():
     conf = """
@@ -69,6 +73,7 @@ unit: "A"
     cfg_dict = yaml.safe_load(conf)
     return MultiAttrCM(**cfg_dict)
 
+
 @pytest.fixture
 def config_tango_cs():
     conf = """
@@ -80,6 +85,7 @@ lazy_devices: false
     cfg_dict = yaml.safe_load(conf)
     return CsCM(**cfg_dict)
 
+
 @pytest.fixture
 def config_tango_cs_lazy_default():
     conf = """
@@ -89,6 +95,7 @@ debug_level: INFO
 """
     cfg_dict = yaml.safe_load(conf)
     return CsCM(**cfg_dict)
+
 
 @pytest.fixture
 def config_tango_cs_false():

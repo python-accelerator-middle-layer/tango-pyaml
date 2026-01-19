@@ -53,6 +53,7 @@ dev = [
     "ruff",                 # Linter (optionnel)
     "mypy",                 # Typage statique (optionnel)
     "ipython",              # Débogage interactif
+    "pre-commit",
 ]
 
 [project.urls]

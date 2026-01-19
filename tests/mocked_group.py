@@ -1,5 +1,6 @@
 from .mocked_device_proxy import *
 
+
 class MockedGroupReply:
     def __init__(self, dev_name, obj_name, error=None):
         self.dev_name = dev_name
@@ -14,7 +15,9 @@ class MockedGroupReply:
 
 
 class MockedGroupAttrReply(MockedGroupReply):
-    def __init__(self, dev_name, obj_name, data:MockedDeviceAttribute = None, error=None):
+    def __init__(
+        self, dev_name, obj_name, data: MockedDeviceAttribute = None, error=None
+    ):
         super().__init__(dev_name, obj_name, error)
         self.data = data
 
@@ -23,7 +26,7 @@ class MockedGroupAttrReply(MockedGroupReply):
 
 
 class MockedGroupCmdReply(MockedGroupReply):
-    def __init__(self, dev_name, obj_name, data = None, error=None):
+    def __init__(self, dev_name, obj_name, data=None, error=None):
         super().__init__(dev_name, obj_name, error)
         self.data = data
 
@@ -73,20 +76,17 @@ class MockedGroup(MagicMock):
             replies.append(MockedGroupAttrReply(name, attr_name, dev_attr))
         return replies
 
-
     def read_attribute_asynch(self, attr_name) -> int:
         asynch_index = 0
-        if len(self.asynch_values)>0:
+        if len(self.asynch_values) > 0:
             asynch_index = max(self.asynch_values.keys()) + 1
         self.asynch_values[asynch_index] = self.read_attribute(attr_name)
         return asynch_index
-
 
     def read_attribute_reply(self, idx):
         val = self.asynch_values[idx]
         del self.asynch_values[idx]
         return val
-
 
     def write_attribute(self, attr_name, value):
         replies = []
@@ -98,15 +98,13 @@ class MockedGroup(MagicMock):
                 replies.append(MockedGroupReply(name, attr_name, e))
         return replies
 
-
     def write_attribute_asynch(self, attr_name, value) -> int:
         asynch_index = 0
-        if len(self.asynch_values)>0:
+        if len(self.asynch_values) > 0:
             asynch_index = max(self.asynch_values.keys()) + 1
         self.write_attribute(attr_name, value)
         self.asynch_values[asynch_index] = None
         return asynch_index
-
 
     def write_attribute_reply(self, idx):
         del self.asynch_values[idx]

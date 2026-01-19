@@ -28,6 +28,7 @@ class ConfigModel(BaseModel):
     unit : str, optional
         Unit of the attributes.
     """
+
     attributes: list[str]
     name: str = ""
     unit: str = ""
@@ -94,8 +95,13 @@ class AttributeList(DeviceAccess, InitializableElement):
             Value to write.
         """
         self._ensure_initialized()
-        logger.log(logging.DEBUG, f"Setting asynchronously list {self.name()} to {value}")
-        [group.write_attribute_asynch(attr_name, value) for attr_name, group in self._tango_groups.items()]
+        logger.log(
+            logging.DEBUG, f"Setting asynchronously list {self.name()} to {value}"
+        )
+        [
+            group.write_attribute_asynch(attr_name, value)
+            for attr_name, group in self._tango_groups.items()
+        ]
 
     def set_and_wait(self, value: float):
         """
@@ -108,7 +114,10 @@ class AttributeList(DeviceAccess, InitializableElement):
         """
         self._ensure_initialized()
         logger.log(logging.DEBUG, f"Setting list {self.name()} to {value}")
-        [group.write_attribute(attr_name, value) for attr_name, group in self._tango_groups.items()]
+        [
+            group.write_attribute(attr_name, value)
+            for attr_name, group in self._tango_groups.items()
+        ]
 
     def get(self) -> array:
         """
@@ -121,14 +130,17 @@ class AttributeList(DeviceAccess, InitializableElement):
         """
         self._ensure_initialized()
         result = {}
-        grp_vals = [group.read_attribute(attr_name) for attr_name, group in self._tango_groups.items()]
+        grp_vals = [
+            group.read_attribute(attr_name)
+            for attr_name, group in self._tango_groups.items()
+        ]
         for vals in grp_vals:
             for val in vals:
                 attr_value = val.data
                 if attr_value is not None:
-                    result[val.dev_name + '/' + val.obj_name] = attr_value.w_value
+                    result[val.dev_name + "/" + val.obj_name] = attr_value.w_value
                 else:
-                    result[val.dev_name + '/' + val.obj_name] = None
+                    result[val.dev_name + "/" + val.obj_name] = None
         return array([result[attribute] for attribute in self._cfg.attributes])
 
     def readback(self) -> array:
@@ -143,17 +155,23 @@ class AttributeList(DeviceAccess, InitializableElement):
         self._ensure_initialized()
         logger.log(logging.DEBUG, f"Reading list {self.name()}")
         result = {}
-        grp_vals = [group.read_attribute(attr_name) for attr_name, group in self._tango_groups.items()]
+        grp_vals = [
+            group.read_attribute(attr_name)
+            for attr_name, group in self._tango_groups.items()
+        ]
         for vals in grp_vals:
             for val in vals:
                 attr_value = val.data
                 if attr_value is not None:
                     quality = Quality[
-                        attr_value.quality.name.rsplit('_', 1)[1]]  # AttrQuality.ATTR_VALID gives Quality.VALID
-                    value = Value(attr_value.value, quality, attr_value.time.todatetime())
-                    result[val.dev_name + '/' + val.obj_name] = value
+                        attr_value.quality.name.rsplit("_", 1)[1]
+                    ]  # AttrQuality.ATTR_VALID gives Quality.VALID
+                    value = Value(
+                        attr_value.value, quality, attr_value.time.todatetime()
+                    )
+                    result[val.dev_name + "/" + val.obj_name] = value
                 else:
-                    result[val.dev_name + '/' + val.obj_name] = None
+                    result[val.dev_name + "/" + val.obj_name] = None
         list_res = [result[attribute] for attribute in self._cfg.attributes]
         return array(list_res)
 
@@ -171,12 +189,19 @@ class AttributeList(DeviceAccess, InitializableElement):
     def get_range(self) -> list[float]:
         attr_range: list[float] = [None, None]
         if self._cfg.range is not None:
-            attr_range[0] = self._cfg.range[0] if self._cfg.range[0] is not None else None
-            attr_range[1] = self._cfg.range[1] if self._cfg.range[1] is not None else None
+            attr_range[0] = (
+                self._cfg.range[0] if self._cfg.range[0] is not None else None
+            )
+            attr_range[1] = (
+                self._cfg.range[1] if self._cfg.range[1] is not None else None
+            )
         else:
             self._ensure_initialized()
-            devices:list[tango.DeviceProxy] = []
-            [devices.extend(group.get_device_list()) for group in self._tango_groups.values()]
+            devices: list[tango.DeviceProxy] = []
+            [
+                devices.extend(group.get_device_list())
+                for group in self._tango_groups.values()
+            ]
             attr_confs = [dev.get_attribute_config() for dev in devices]
             attr_range: list[float] = []
             for conf in attr_confs:
@@ -195,4 +220,4 @@ class AttributeList(DeviceAccess, InitializableElement):
         return available
 
     def __repr__(self):
-       return repr(self._cfg).replace("ConfigModel",self.__class__.__name__)
+        return repr(self._cfg).replace("ConfigModel", self.__class__.__name__)

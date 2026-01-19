@@ -1,6 +1,7 @@
 import tango
 import pyaml
 
+
 def to_float_or_none(s):
     try:
         return float(s)
@@ -22,7 +23,7 @@ def tango_to_PyAMLException(df: tango.DevFailed) -> pyaml.PyAMLException:
     pyaml.PyAMLException
         Converted exception including reason, description, origin and severity.
     """
-    if len(df.args)>0:
+    if len(df.args) > 0:
         err = df.args[0]
         message = f"{err.reason}: {err.desc} Origin: {err.origin} Severity: {err.severity.name}"
     else:

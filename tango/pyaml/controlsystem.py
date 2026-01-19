@@ -1,13 +1,11 @@
-import os
 import logging
 import copy
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 from pyaml.control.controlsystem import ControlSystem
 from pyaml.control.deviceaccess import DeviceAccess
-from .device_factory import DeviceFactory
 
-PYAMLCLASS : str = "TangoControlSystem"
+PYAMLCLASS: str = "TangoControlSystem"
 
 logger = logging.getLogger(__name__)
 
@@ -25,19 +23,21 @@ class ConfigModel(BaseModel):
     debug_level : int
         Debug verbosity level.
     scalar_aggregator : str
-        Aggregator module for scalar values. If none specified, writings and readings of sclar value are serialized. 
+        Aggregator module for scalar values. If none specified, writings and readings of sclar value are serialized.
     vector_aggregator : str
-        Aggregator module for vecrors. If none specified, writings and readings of vector are serialized. 
+        Aggregator module for vecrors. If none specified, writings and readings of vector are serialized.
     timeout_ms : int
         Device timeout in milli seconds.
     """
+
     name: str
     tango_host: str | None = None
-    debug_level: str=None
+    debug_level: str = None
     lazy_devices: bool = True
     scalar_aggregator: str | None = "tango.pyaml.multi_attribute"
     vector_aggregator: str | None = None
     timeout_ms: int = 3000
+
 
 class TangoControlSystem(ControlSystem):
     """
@@ -52,17 +52,20 @@ class TangoControlSystem(ControlSystem):
     def __init__(self, cfg: ConfigModel):
         super().__init__()
         self._cfg = cfg
-        self.__devices = {} # Dict containing all attached DeviceAccess
+        self.__devices = {}  # Dict containing all attached DeviceAccess
 
         if self._cfg.debug_level:
-          log_level = getattr(logging, self._cfg.debug_level, logging.WARNING)
-          logger.parent.setLevel(log_level)
-          logger.setLevel(log_level)
+            log_level = getattr(logging, self._cfg.debug_level, logging.WARNING)
+            logger.parent.setLevel(log_level)
+            logger.setLevel(log_level)
 
-        logger.log(logging.WARNING, f"Tango control system binding for PyAML initialized with name '{self._cfg.name}'"
-                                 f" and TANGO_HOST={self._cfg.tango_host}")
+        logger.log(
+            logging.WARNING,
+            f"Tango control system binding for PyAML initialized with name '{self._cfg.name}'"
+            f" and TANGO_HOST={self._cfg.tango_host}",
+        )
 
-    def __newref(self,obj,new_name:str):
+    def __newref(self, obj, new_name: str):
         # Shallow copy the object
         newObj = copy.copy(obj)
         # Shallow copy the config object
@@ -81,7 +84,7 @@ class TangoControlSystem(ControlSystem):
                 else:
                     full_name = d._cfg.attribute
                 if full_name not in self.__devices:
-                    self.__devices[full_name] = self.__newref(d,full_name)
+                    self.__devices[full_name] = self.__newref(d, full_name)
                 newDevs.append(self.__devices[full_name])
             else:
                 newDevs.append(None)
@@ -100,7 +103,7 @@ class TangoControlSystem(ControlSystem):
             Name of the control system.
         """
         return self._cfg.name
-    
+
     def scalar_aggregator(self) -> str | None:
         """
         Returns the module name used for handling aggregator of DeviceAccess
@@ -115,7 +118,7 @@ class TangoControlSystem(ControlSystem):
     def vector_aggregator(self) -> str | None:
         """
         Returns the module name used for handling aggregator of DeviceVectorAccess
-        
+
         Returns
         -------
         str
@@ -124,4 +127,4 @@ class TangoControlSystem(ControlSystem):
         return self._cfg.vector_aggregator
 
     def __repr__(self):
-       return repr(self._cfg).replace("ConfigModel",self.__class__.__name__)
+        return repr(self._cfg).replace("ConfigModel", self.__class__.__name__)

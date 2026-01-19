@@ -1,16 +1,11 @@
 import logging
-import os
 
-import pyaml
-import pytest
 from tango.pyaml.controlsystem import TangoControlSystem
 
-from tango.pyaml.attribute_read_only import AttributeReadOnly
 
 from .mocked_device_proxy import *
 from unittest.mock import patch
 from tango.pyaml.attribute import Attribute
-from tango.pyaml.attribute_list import AttributeList
 
 
 def test_init_cs(caplog, config_tango_cs):
@@ -18,11 +13,14 @@ def test_init_cs(caplog, config_tango_cs):
     with caplog.at_level(logging.INFO):
         tango_cs = TangoControlSystem(config_tango_cs)
 
-    expected_message = (f"Tango control system binding for PyAML initialized with name '{config_tango_cs.name}'"
-                        f" and TANGO_HOST={config_tango_cs.tango_host}")
+    expected_message = (
+        f"Tango control system binding for PyAML initialized with name '{config_tango_cs.name}'"
+        f" and TANGO_HOST={config_tango_cs.tango_host}"
+    )
 
     # Check that the INFO init message was actually logged with correct values
     assert any(expected_message == record.message for record in caplog.records)
+
 
 def test_laziness_init_cs_attribute(config_tango_cs_lazy_default, config):
     with patch("tango.DeviceProxy", side_effect=MockedDeviceProxy) as mock_ctor:
