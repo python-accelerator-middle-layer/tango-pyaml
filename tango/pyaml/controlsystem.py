@@ -4,6 +4,7 @@ import copy
 from pydantic import BaseModel
 from pyaml.control.controlsystem import ControlSystem
 from pyaml.control.deviceaccess import DeviceAccess
+from . import __version__
 
 PYAMLCLASS: str = "TangoControlSystem"
 
@@ -61,7 +62,7 @@ class TangoControlSystem(ControlSystem):
 
         logger.log(
             logging.WARNING,
-            f"Tango control system binding for PyAML initialized with name '{self._cfg.name}'"
+            f"PyAML Tango control system binding ({__version__}) initialized with name '{self._cfg.name}'"
             f" and TANGO_HOST={self._cfg.tango_host}",
         )
 
@@ -74,7 +75,13 @@ class TangoControlSystem(ControlSystem):
         newObj._cfg.attribute = new_name
         return newObj
 
+    def attach_array(self, devs: list[DeviceAccess]) -> list[DeviceAccess]:
+        return self._attach(devs)
+
     def attach(self, devs: list[DeviceAccess]) -> list[DeviceAccess]:
+        return self._attach(devs)
+
+    def _attach(self, devs: list[DeviceAccess]) -> list[DeviceAccess]:
         # Concatenate the tango_host prefix
         newDevs = []
         for d in devs:
@@ -89,9 +96,6 @@ class TangoControlSystem(ControlSystem):
             else:
                 newDevs.append(None)
         return newDevs
-
-    def attach_array(self, dev: list[DeviceAccess]) -> list[DeviceAccess]:
-        pass
 
     def name(self) -> str:
         """
