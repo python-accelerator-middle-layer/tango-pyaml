@@ -3,18 +3,19 @@ import logging
 from tango.pyaml.controlsystem import TangoControlSystem
 
 
-from .mocked_device_proxy import *
+from .mocked_device_proxy import MockedDeviceProxy
 from unittest.mock import patch
 from tango.pyaml.attribute import Attribute
+from tango.pyaml import __version__
 
 
 def test_init_cs(caplog, config_tango_cs):
     # Capture logs
     with caplog.at_level(logging.INFO):
-        tango_cs = TangoControlSystem(config_tango_cs)
+        TangoControlSystem(config_tango_cs)
 
     expected_message = (
-        f"Tango control system binding for PyAML initialized with name '{config_tango_cs.name}'"
+        f"PyAML Tango control system binding ({__version__}) initialized with name '{config_tango_cs.name}'"
         f" and TANGO_HOST={config_tango_cs.tango_host}"
     )
 
