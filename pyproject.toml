@@ -42,7 +42,7 @@ classifiers = [
 
 dependencies = [
     "PyTango>=10.1.1",
-    "accelerator-middle-layer<=0.1.1",
+    "accelerator-middle-layer<=0.2.2",
     "pydantic>=2.0"
 ]
 
@@ -53,6 +53,7 @@ dev = [
     "ruff",                 # Linter (optionnel)
     "mypy",                 # Typage statique (optionnel)
     "ipython",              # Débogage interactif
+    "pre-commit",
 ]
 
 [project.urls]

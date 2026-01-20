@@ -1,17 +1,19 @@
 import logging
+from typing import Optional, Tuple
+
 from pydantic import BaseModel
 
 from pyaml.control.deviceaccess import DeviceAccess
 from pyaml.control.readback_value import Value, Quality
 
-from .controlsystem import TangoControlSystem
 from .initializable_element import InitializableElement
 from .device_factory import DeviceFactory
 from .tango_pyaml_utils import *
 
-PYAMLCLASS : str = "Attribute"
+PYAMLCLASS: str = "Attribute"
 
 logger = logging.getLogger(__name__)
+
 
 class ConfigModel(BaseModel):
     """
@@ -23,9 +25,14 @@ class ConfigModel(BaseModel):
         Full path of the Tango attribute (e.g., 'my/ps/device/current').
     unit : str, optional
         The unit of the attribute.
+    range : tuple(min, max), optional
+        Range of valid values. Use null for -∞ or +∞.
     """
+
     attribute: str
     unit: str = ""
+    range: Optional[Tuple[Optional[float], Optional[float]]] = None
+
 
 class Attribute(DeviceAccess, InitializableElement):
     """
@@ -41,31 +48,43 @@ class Attribute(DeviceAccess, InitializableElement):
     pyaml.PyAMLException
         If the Tango attribute is not writable.
     """
+
     def __init__(self, cfg: ConfigModel, writable=True):
         super().__init__()
         self._cfg = cfg
         self._writable = writable
-        self._attribute_dev:tango.DeviceProxy = None
+        self._attribute_dev: tango.DeviceProxy = None
+        self._attr_config: tango.AttributeConfig = None
+        self._attribute_dev_name: str = None
+        self._attr_name: str = None
 
     def initialize(self):
         super().initialize()
         try:
-            self._attribute_dev_name, self._attr_name = self._cfg.attribute.rsplit("/", 1)
+            self._attribute_dev_name, self._attr_name = self._cfg.attribute.rsplit(
+                "/", 1
+            )
             self._attribute_dev = DeviceFactory().get_device(self._attribute_dev_name)
         except tango.DevFailed as df:
             raise tango_to_PyAMLException(df)
-        
-        self._attr_config = self._attribute_dev.get_attribute_config(self._attr_name, wait=True)
+
+        self._attr_config: tango.AttributeConfig = (
+            self._attribute_dev.get_attribute_config(self._attr_name, wait=True)
+        )
 
         if self._writable:
-            if  self._attr_config .writable not in [tango._tango.AttrWriteType.READ_WRITE,
-                                          tango._tango.AttrWriteType.WRITE,
-                                          tango._tango.AttrWriteType.READ_WITH_WRITE]:
-                raise pyaml.PyAMLException(f"Tango attribute {self._cfg.attribute} is not writable.")
-            
+            if self._attr_config.writable not in [
+                tango.AttrWriteType.READ_WRITE,
+                tango.AttrWriteType.WRITE,
+                tango.AttrWriteType.READ_WITH_WRITE,
+            ]:
+                raise pyaml.PyAMLException(
+                    f"Tango attribute {self._cfg.attribute} is not writable."
+                )
+
     def is_writable(self):
         return self._writable
-            
+
     def set(self, value: float):
         """
         Write a value asynchronously to the Tango attribute.
@@ -81,12 +100,13 @@ class Attribute(DeviceAccess, InitializableElement):
             If the Tango write fails.
         """
         self._ensure_initialized()
-        logger.log(logging.DEBUG, f"Setting asynchronously {self._cfg.attribute} to {value}")
+        logger.log(
+            logging.DEBUG, f"Setting asynchronously {self._cfg.attribute} to {value}"
+        )
         try:
             self._attribute_dev.write_attribute_asynch(self._attr_name, value)
         except tango.DevFailed as df:
             raise tango_to_PyAMLException(df)
-
 
     def set_and_wait(self, value: float):
         """
@@ -127,8 +147,10 @@ class Attribute(DeviceAccess, InitializableElement):
         logger.log(logging.DEBUG, f"Reading {self._cfg.attribute}")
         try:
             attr_value = self._attribute_dev.read_attribute(self._attr_name)
-            quality = Quality[attr_value.quality.name.rsplit('_', 1)[1]] # AttrQuality.ATTR_VALID gives Quality.VALID
-            value = Value(attr_value.value, quality, attr_value.time.todatetime() )
+            quality = Quality[
+                attr_value.quality.name.rsplit("_", 1)[1]
+            ]  # AttrQuality.ATTR_VALID gives Quality.VALID
+            value = Value(attr_value.value, quality, attr_value.time.todatetime())
         except tango.DevFailed as df:
             raise tango_to_PyAMLException(df)
         return value
@@ -164,7 +186,7 @@ class Attribute(DeviceAccess, InitializableElement):
         str
             The attribute name (e.g., 'current').
         """
-        return self._cfg.attribute.rsplit('/', 1)[1]
+        return self._cfg.attribute.rsplit("/", 1)[1]
 
     def get(self) -> float:
         """
@@ -185,6 +207,33 @@ class Attribute(DeviceAccess, InitializableElement):
             return self._attribute_dev.read_attribute(self._attr_name).w_value
         except tango.DevFailed as df:
             raise tango_to_PyAMLException(df)
-    
+
+    def get_range(self) -> list[float]:
+        attr_range: list[float] = [None, None]
+        if self._cfg.range is not None:
+            attr_range[0] = (
+                self._cfg.range[0] if self._cfg.range[0] is not None else None
+            )
+            attr_range[1] = (
+                self._cfg.range[1] if self._cfg.range[1] is not None else None
+            )
+        else:
+            self._ensure_initialized()
+            min_value = self._attr_config.min_value
+            max_value = self._attr_config.max_value
+            attr_range[0] = to_float_or_none(min_value)
+            attr_range[1] = to_float_or_none(max_value)
+
+        return attr_range
+
+    def check_device_availability(self) -> bool:
+        available = True
+        try:
+            self._ensure_initialized()
+            self._attribute_dev.ping()
+        except tango.DevFailed | pyaml.PyAMLException:
+            available = False
+        return available
+
     def __repr__(self):
-       return repr(self._cfg).replace("ConfigModel",self.__class__.__name__)
+        return repr(self._cfg).replace("ConfigModel", self.__class__.__name__)

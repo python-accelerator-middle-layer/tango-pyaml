@@ -1,9 +1,7 @@
 from abc import ABCMeta, abstractmethod
 
-import pyaml
 
 class InitializableElement(metaclass=ABCMeta):
-
     def __init__(self):
         self._initialized = False
 

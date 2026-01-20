@@ -3,9 +3,10 @@ import logging
 import pyaml
 from .attribute_list import AttributeList, ConfigModel
 
-PYAMLCLASS : str = "AttributeListReadOnly"
+PYAMLCLASS: str = "AttributeListReadOnly"
 
 logger = logging.getLogger(__name__)
+
 
 class AttributeListReadOnly(AttributeList):
     """
@@ -20,7 +21,6 @@ class AttributeListReadOnly(AttributeList):
     def __init__(self, cfg: ConfigModel):
         super().__init__(cfg)
 
-
     def set(self, value: float):
         """
         Write a value asynchronously to all Tango attributes.
@@ -30,8 +30,9 @@ class AttributeListReadOnly(AttributeList):
         value : float
             Value to write.
         """
-        raise pyaml.PyAMLException(f"Tango attribute list {self.name()} is not writable.")
-
+        raise pyaml.PyAMLException(
+            f"Tango attribute list {self.name()} is not writable."
+        )
 
     def set_and_wait(self, value: float):
         """
@@ -42,5 +43,7 @@ class AttributeListReadOnly(AttributeList):
         value : float
             Value to write.
         """
-        [group.write_attribute(attr_name, value) for attr_name, group in self._tango_groups.items()]
-
+        [
+            group.write_attribute(attr_name, value)
+            for attr_name, group in self._tango_groups.items()
+        ]
