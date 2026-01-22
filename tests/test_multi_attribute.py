@@ -1,6 +1,8 @@
 import random
 
-
+import pytest
+from pyaml import PyAMLException
+from tango.pyaml.attribute import Attribute
 from .mocked_control_system_initialized import MockedControlSystemInitialized
 from .mocked_device_proxy import MockedDeviceProxy
 from unittest.mock import patch
@@ -24,3 +26,14 @@ class TestMultiAttributes:
             assert len(vals) == len(values)
             for index, val in enumerate(vals):
                 assert val == values[index]
+
+    def test_multiattribute_range(self, config_multi_range):
+        with (
+            patch("tango.DeviceProxy", new=MockedDeviceProxy),
+            patch("tango.pyaml.controlsystem.TangoControlSystem", new=MockedControlSystemInitialized),
+        ):
+            ma = MultiAttribute(config_multi_range)
+            attr_range = ma.get_range()
+            assert attr_range is not None
+            assert len(attr_range) == 8 # (4*2)
+            assert attr_range == [-15, 15,-15, 15,-15, 15,-15, 15]

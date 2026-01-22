@@ -75,6 +75,21 @@ unit: "A"
 
 
 @pytest.fixture
+def config_multi_range():
+    conf = """
+attributes:
+    - "sys/tg_test/1/float_scalar"
+    - "sys/tg_test/2/float_scalar"
+    - "sys/tg_test/3/float_scalar"
+    - "sys/tg_test/4/float_scalar"
+unit: "A"
+range: [-15, 15]
+"""
+    cfg_dict = yaml.safe_load(conf)
+    return MultiAttrCM(**cfg_dict)
+
+
+@pytest.fixture
 def config_tango_cs():
     conf = """
 name: test_tango_cs

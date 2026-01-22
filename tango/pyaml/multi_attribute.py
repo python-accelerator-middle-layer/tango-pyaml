@@ -1,4 +1,5 @@
 import logging
+from typing import Tuple, Optional
 
 import numpy as np
 import pyaml
@@ -28,11 +29,14 @@ class ConfigModel(BaseModel):
         Group name.
     unit : str, optional
         Unit of the attributes.
+    range : tuple(min, max), optional
+        Range of valid values. Use null for -∞ or +∞.
     """
 
     attributes: list[str] = []
     name: str = ""
     unit: str = ""
+    range: Optional[Tuple[Optional[float], Optional[float]]] = None
 
 
 class MultiAttribute(DeviceAccessList):
@@ -41,7 +45,7 @@ class MultiAttribute(DeviceAccessList):
         self._cfg = cfg
         if self._cfg:
             for attribute in self._cfg.attributes:
-                attr_config = AttrConfig(attribute=attribute, unit=self._cfg.unit)
+                attr_config = AttrConfig(attribute=attribute, unit=self._cfg.unit, range=self._cfg.range)
                 attr = Attribute(attr_config)
                 self.append(attr)
 
@@ -127,6 +131,20 @@ class MultiAttribute(DeviceAccessList):
             values.append(dev_attr.value)
 
         return np.array(values)
+
+    def get_range(self) -> list[float]:
+        attr_range: list[float] = []
+        for device in self:
+            attr_range.extend(device.get_range())
+        return attr_range
+
+    def check_device_availability(self) -> bool:
+        available = False
+        for device in self:
+            available = device.check_device_availability()
+            if not available:
+                break
+        return available
 
     def unit(self) -> str:
         if self._cfg:
