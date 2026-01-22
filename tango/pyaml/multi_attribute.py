@@ -45,7 +45,9 @@ class MultiAttribute(DeviceAccessList):
         self._cfg = cfg
         if self._cfg:
             for attribute in self._cfg.attributes:
-                attr_config = AttrConfig(attribute=attribute, unit=self._cfg.unit, range=self._cfg.range)
+                attr_config = AttrConfig(
+                    attribute=attribute, unit=self._cfg.unit, range=self._cfg.range
+                )
                 attr = Attribute(attr_config)
                 self.append(attr)
 
