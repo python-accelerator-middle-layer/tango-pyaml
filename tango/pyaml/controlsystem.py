@@ -1,6 +1,7 @@
 import logging
 import copy
 
+from pyaml.configuration.catalog import Catalog
 from pydantic import BaseModel
 from pyaml.control.controlsystem import ControlSystem
 from pyaml.control.deviceaccess import DeviceAccess
@@ -33,6 +34,7 @@ class ConfigModel(BaseModel):
 
     name: str
     tango_host: str | None = None
+    catalog: str
     debug_level: str = None
     lazy_devices: bool = True
     scalar_aggregator: str | None = "tango.pyaml.multi_attribute"
@@ -65,6 +67,15 @@ class TangoControlSystem(ControlSystem):
             f"PyAML Tango control system binding ({__version__}) initialized with name '{self._cfg.name}'"
             f" and TANGO_HOST={self._cfg.tango_host}",
         )
+
+    def set_catalog(self, catalog: Catalog | None):
+        super().set_catalog(catalog)
+        # Overriding this method here will allow in the future to set the tango data to a catalog dealing
+        # directly with the tango database
+
+    def get_catalog_name(self) -> str | None:
+        """Returns the name of the catalog dedicated to this control system"""
+        return self._cfg.catalog
 
     def __newref(self, obj, new_name: str):
         # Shallow copy the object
