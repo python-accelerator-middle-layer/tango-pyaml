@@ -1,7 +1,7 @@
 import logging
 import copy
 
-from pyaml.configuration.catalog import Catalog
+from pyaml.control.catalog_view import CatalogView
 from pydantic import BaseModel
 from pyaml.control.controlsystem import ControlSystem
 from pyaml.control.deviceaccess import DeviceAccess
@@ -68,7 +68,7 @@ class TangoControlSystem(ControlSystem):
             f" and TANGO_HOST={self._cfg.tango_host}",
         )
 
-    def set_catalog(self, catalog: Catalog | None):
+    def set_catalog(self, catalog: CatalogView | None):
         super().set_catalog(catalog)
         # Overriding this method here will allow in the future to set the tango data to a catalog dealing
         # directly with the tango database

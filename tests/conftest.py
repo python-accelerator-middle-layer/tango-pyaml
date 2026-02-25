@@ -95,6 +95,7 @@ def config_tango_cs():
 name: test_tango_cs
 tango_host: tangodb:10000
 debug_level: INFO
+catalog: YOLO
 lazy_devices: false
 """
     cfg_dict = yaml.safe_load(conf)
@@ -106,6 +107,7 @@ def config_tango_cs_lazy_default():
     conf = """
 name: test_tango_cs
 tango_host: tangodb:10000
+catalog: YOLO
 debug_level: INFO
 """
     cfg_dict = yaml.safe_load(conf)
@@ -117,6 +119,7 @@ def config_tango_cs_false():
     conf = """
 name: test_tango_cs_false
 tango_host: this_is_an_error
+catalog: YOLO
 debug_level: nope
 """
     cfg_dict = yaml.safe_load(conf)

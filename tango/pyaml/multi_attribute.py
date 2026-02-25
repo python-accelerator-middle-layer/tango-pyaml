@@ -53,13 +53,13 @@ class MultiAttribute(DeviceAccessList):
 
     def add_devices(self, devices: DeviceAccess | list[DeviceAccess]):
         if isinstance(devices, list):
-            if any([not isinstance(device, Attribute) for device in devices]):
+            if any([not isinstance(DeviceAccessList.unwrap(device), Attribute) for device in devices]):
                 raise pyaml.PyAMLException(
                     "All devices must be instances of Attribute (tango.pyaml.attribute)."
                 )
             super().extend(devices)
         else:
-            if not isinstance(devices, Attribute):
+            if not isinstance(DeviceAccessList.unwrap(devices), Attribute):
                 raise pyaml.PyAMLException(
                     "Device must be an instance of Attribute (tango.pyaml.attribute)."
                 )
