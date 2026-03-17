@@ -3,7 +3,7 @@ import copy
 
 from pyaml.configuration.catalog import Catalog
 from pyaml.control.catalog_view import CatalogView
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from pyaml.control.controlsystem import ControlSystem
 from pyaml.control.deviceaccess import DeviceAccess
 from . import __version__
@@ -32,6 +32,7 @@ class ConfigModel(BaseModel):
     timeout_ms : int
         Device timeout in milli seconds.
     """
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     name: str
     tango_host: str | None = None
