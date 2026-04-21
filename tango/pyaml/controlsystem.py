@@ -1,7 +1,8 @@
 import logging
 import copy
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from pyaml.configuration.catalog import Catalog
 from pyaml.control.controlsystem import ControlSystem
 from pyaml.control.deviceaccess import DeviceAccess
 from . import __version__
@@ -21,6 +22,8 @@ class ConfigModel(BaseModel):
         Name of the control system.
     tango_host : str
         Tango host URL. Default is the TANGO_HOST variable.
+    catalog : Catalog | str | None
+        Catalog instance or catalog name used to resolve PyAML device keys.
     debug_level : int
         Debug verbosity level.
     scalar_aggregator : str
@@ -31,9 +34,12 @@ class ConfigModel(BaseModel):
         Device timeout in milli seconds.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+
     name: str
     tango_host: str | None = None
-    debug_level: str = None
+    catalog: Catalog | str | None = None
+    debug_level: str | None = None
     lazy_devices: bool = True
     scalar_aggregator: str | None = "tango.pyaml.multi_attribute"
     vector_aggregator: str | None = None
