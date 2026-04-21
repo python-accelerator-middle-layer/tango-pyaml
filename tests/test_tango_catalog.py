@@ -1,0 +1,151 @@
+from unittest.mock import patch
+
+import pyaml
+import pytest
+import tango
+from pyaml.control.controlsystem import ControlSystemAdapter
+
+from .mocked_device_proxy import MockedAttributeInfoEx, MockedAttributeProxy
+from tango.pyaml.attribute import Attribute
+from tango.pyaml.attribute_read_only import AttributeReadOnly
+from tango.pyaml.controlsystem import ConfigModel as TangoControlSystemConfigModel
+from tango.pyaml.controlsystem import TangoControlSystem
+from tango.pyaml.tango_catalog import ConfigModel, TangoCatalog
+
+
+def build_resolver(catalog: TangoCatalog, name="live"):
+    control_system = TangoControlSystem(TangoControlSystemConfigModel(name=name))
+    return catalog.attach_control_system(control_system)
+
+
+def test_tango_catalog_disconnected_resolves_without_querying_tango():
+    catalog = TangoCatalog(ConfigModel(name="tango-direct", disconnected=True))
+    resolver = build_resolver(catalog)
+
+    with patch("tango.AttributeProxy") as attr_proxy:
+        device = resolver.resolve("domain/family/member/attribute")
+
+    attr_proxy.assert_not_called()
+    assert isinstance(device, Attribute)
+    assert device.name() == "domain/family/member/attribute"
+    assert device.unit() == ""
+    assert device.get_range() == [None, None]
+
+
+def test_tango_catalog_connected_resolves_writable_attribute():
+    attr_config = MockedAttributeInfoEx(
+        name="current",
+        writable=tango.AttrWriteType.READ_WRITE,
+        unit="A",
+        min_value="-10.5",
+        max_value="12.0",
+        data_format=tango.AttrDataFormat.SPECTRUM,
+    )
+    catalog = TangoCatalog(ConfigModel(name="tango-direct"))
+    resolver = build_resolver(catalog)
+
+    with patch(
+        "tango.AttributeProxy",
+        return_value=MockedAttributeProxy("domain/family/member/current", attr_config),
+    ):
+        device = resolver.resolve("domain/family/member/current")
+
+    assert isinstance(device, Attribute)
+    assert not isinstance(device, AttributeReadOnly)
+    assert device.name() == "domain/family/member/current"
+    assert device.unit() == "A"
+    assert device.get_range() == [-10.5, 12.0]
+    assert resolver.get_data_format("domain/family/member/current") == tango.AttrDataFormat.SPECTRUM
+
+
+def test_tango_catalog_connected_resolves_read_only_attribute():
+    attr_config = MockedAttributeInfoEx(name="position", writable=tango.AttrWriteType.READ, unit="mm")
+    catalog = TangoCatalog(ConfigModel(name="tango-direct"))
+    resolver = build_resolver(catalog)
+
+    with patch(
+        "tango.AttributeProxy",
+        return_value=MockedAttributeProxy("domain/family/member/position", attr_config),
+    ):
+        device = resolver.resolve("domain/family/member/position")
+
+    assert isinstance(device, AttributeReadOnly)
+    assert device.unit() == "mm"
+
+
+def test_tango_catalog_caches_resolved_devices():
+    catalog = TangoCatalog(ConfigModel(name="tango-direct"))
+    resolver = build_resolver(catalog)
+
+    with patch(
+        "tango.AttributeProxy",
+        return_value=MockedAttributeProxy("domain/family/member/attribute"),
+    ) as attr_proxy:
+        first = resolver.resolve("domain/family/member/attribute")
+        second = resolver.resolve("domain/family/member/attribute")
+
+    attr_proxy.assert_called_once_with("domain/family/member/attribute")
+    assert first is second
+
+
+def test_tango_catalog_cache_is_bound_to_control_system_resolver():
+    catalog = TangoCatalog(ConfigModel(name="tango-direct"))
+    live_resolver = build_resolver(catalog, name="live")
+    ops_resolver = build_resolver(catalog, name="ops")
+
+    with patch(
+        "tango.AttributeProxy",
+        return_value=MockedAttributeProxy("domain/family/member/attribute"),
+    ) as attr_proxy:
+        live_first = live_resolver.resolve("domain/family/member/attribute")
+        live_second = live_resolver.resolve("domain/family/member/attribute")
+        ops_device = ops_resolver.resolve("domain/family/member/attribute")
+
+    assert attr_proxy.call_count == 2
+    assert live_first is live_second
+    assert ops_device is not live_first
+
+
+def test_tango_catalog_can_be_used_through_tango_control_system():
+    catalog = TangoCatalog(ConfigModel(name="tango-direct", disconnected=True))
+    control_system = TangoControlSystem(TangoControlSystemConfigModel(name="live"))
+    control_system.set_catalog(catalog)
+
+    device = control_system.resolve_device("domain/family/member/attribute")
+
+    assert isinstance(device, Attribute)
+    assert control_system.get_catalog() is catalog
+
+
+def test_tango_catalog_rejects_non_tango_control_system():
+    catalog = TangoCatalog(ConfigModel(name="tango-direct"))
+
+    with pytest.raises(pyaml.PyAMLException, match="can only be attached to TangoControlSystem"):
+        catalog.attach_control_system(ControlSystemAdapter())
+
+
+def test_tango_catalog_requires_control_system_attachment():
+    catalog = TangoCatalog(ConfigModel(name="tango-direct"))
+
+    with pytest.raises(pyaml.PyAMLException, match="must be attached to a TangoControlSystem"):
+        catalog.resolve("domain/family/member/attribute")
+
+
+def test_tango_catalog_rejects_invalid_tango_reference():
+    catalog = TangoCatalog(ConfigModel(name="tango-direct"))
+    resolver = build_resolver(catalog)
+
+    with pytest.raises(pyaml.PyAMLException, match="Expected 'domain/family/member/attribute'"):
+        resolver.resolve("domain/family/member")
+
+
+def test_tango_catalog_wraps_tango_errors():
+    catalog = TangoCatalog(ConfigModel(name="tango-direct"))
+    resolver = build_resolver(catalog)
+
+    with patch("tango.AttributeProxy", side_effect=tango.DevFailed()):
+        with pytest.raises(
+            pyaml.PyAMLException,
+            match="Tango catalog 'tango-direct' cannot resolve 'domain/family/member/attribute'",
+        ):
+            resolver.resolve("domain/family/member/attribute")
