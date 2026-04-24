@@ -1,12 +1,9 @@
 import logging
 
-from pyaml.configuration.static_catalog import ConfigModel as StaticCatalogConfigModel
-from pyaml.configuration.static_catalog import StaticCatalog
-from pyaml.configuration.static_catalog_entry import (
-    ConfigModel as StaticCatalogEntryConfigModel,
-)
-from pyaml.configuration.static_catalog_entry import StaticCatalogEntry
-
+from tango.pyaml.static_catalog import ConfigModel as StaticCatalogConfigModel
+from tango.pyaml.static_catalog import StaticCatalog
+from tango.pyaml.static_catalog_entry import ConfigModel as StaticCatalogEntryConfigModel
+from tango.pyaml.static_catalog_entry import StaticCatalogEntry
 from tango.pyaml.controlsystem import ConfigModel, TangoControlSystem
 
 
