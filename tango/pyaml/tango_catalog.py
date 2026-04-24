@@ -7,8 +7,6 @@ from pyaml.control.deviceaccess import DeviceAccess
 
 from .attribute import Attribute, ConfigModel as AttributeConfigModel
 from .attribute_read_only import AttributeReadOnly
-from .attribute_indexed import AttributeIndexed, ConfigModel as IndexedConfigModel
-from .attribute_indexed_read_only import AttributeIndexedReadOnly
 from .tango_pyaml_utils import tango_to_PyAMLException, to_float_or_none
 
 PYAMLCLASS = "TangoCatalog"
@@ -196,7 +194,7 @@ class TangoCatalogResolver(CatalogResolver):
         # Cannot verify SPECTRUM in disconnected mode; store FMT_UNKNOWN.
         key = f"{attr_path}@{index}"
         self._data_formats[key] = tango.AttrDataFormat.FMT_UNKNOWN
-        return AttributeIndexed(IndexedConfigModel(attribute=attr_path, index=index, range=(None, None)))
+        return Attribute(AttributeConfigModel(attribute=attr_path, index=index, range=(None, None)))
 
     def _build_connected_attribute(self, key: str) -> DeviceAccess:
         try:
@@ -254,8 +252,8 @@ class TangoCatalogResolver(CatalogResolver):
             to_float_or_none(getattr(attr_config, "min_value", None)),
             to_float_or_none(getattr(attr_config, "max_value", None)),
         )
-        cfg = IndexedConfigModel(attribute=attr_path, index=index, unit=unit, range=attr_range)
+        cfg = AttributeConfigModel(attribute=attr_path, index=index, unit=unit, range=attr_range)
 
         if getattr(attr_config, "writable", tango.AttrWriteType.WT_UNKNOWN) in self._WRITABLE_TYPES:
-            return AttributeIndexed(cfg)
-        return AttributeIndexedReadOnly(cfg)
+            return Attribute(cfg)
+        return AttributeReadOnly(cfg)

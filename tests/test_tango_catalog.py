@@ -8,8 +8,6 @@ from pyaml.control.controlsystem import ControlSystemAdapter
 from .mocked_device_proxy import MockedAttributeInfoEx, MockedAttributeProxy
 from tango.pyaml.attribute import Attribute
 from tango.pyaml.attribute_read_only import AttributeReadOnly
-from tango.pyaml.attribute_indexed import AttributeIndexed
-from tango.pyaml.attribute_indexed_read_only import AttributeIndexedReadOnly
 from tango.pyaml.controlsystem import ConfigModel as TangoControlSystemConfigModel
 from tango.pyaml.controlsystem import TangoControlSystem
 from tango.pyaml.tango_catalog import ConfigModel, TangoCatalog
@@ -157,7 +155,7 @@ def test_tango_catalog_disconnected_resolves_indexed_attribute():
         device = resolver.resolve("domain/family/member/attribute@1")
 
     attr_proxy.assert_not_called()
-    assert isinstance(device, AttributeIndexed)
+    assert isinstance(device, Attribute) and device._index is not None
     assert device.name() == "domain/family/member/attribute[1]"
     assert device.unit() == ""
     assert device.get_range() == [None, None]
@@ -179,8 +177,8 @@ def test_tango_catalog_connected_resolves_indexed_writable_spectrum():
     ):
         device = resolver.resolve("domain/family/member/position@0")
 
-    assert isinstance(device, AttributeIndexed)
-    assert not isinstance(device, AttributeIndexedReadOnly)
+    assert isinstance(device, Attribute) and device._index is not None
+    assert not isinstance(device, AttributeReadOnly)
     assert device.name() == "domain/family/member/position[0]"
     assert device.unit() == "mm"
     assert resolver.get_data_format("domain/family/member/position@0") == tango.AttrDataFormat.SPECTRUM
@@ -202,7 +200,7 @@ def test_tango_catalog_connected_resolves_indexed_read_only_spectrum():
     ):
         device = resolver.resolve("domain/family/member/position@2")
 
-    assert isinstance(device, AttributeIndexedReadOnly)
+    assert isinstance(device, AttributeReadOnly) and device._index is not None
     assert device.unit() == "mm"
 
 
