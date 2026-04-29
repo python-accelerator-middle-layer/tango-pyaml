@@ -1,7 +1,7 @@
 import logging
-import copy
 
 from pydantic import BaseModel, ConfigDict
+from pyaml import PyAMLException
 from pyaml.configuration.catalog import Catalog
 from pyaml.control.controlsystem import ControlSystem
 from pyaml.control.deviceaccess import DeviceAccess
@@ -72,15 +72,6 @@ class TangoControlSystem(ControlSystem):
             f" and TANGO_HOST={self._cfg.tango_host}",
         )
 
-    def __newref(self, obj, new_name: str):
-        # Shallow copy the object
-        newObj = copy.copy(obj)
-        # Shallow copy the config object
-        # to allow a new attribute name
-        newObj._cfg = copy.copy(obj._cfg)
-        newObj._cfg.attribute = new_name
-        return newObj
-
     def attach_array(self, devs: list[DeviceAccess]) -> list[DeviceAccess]:
         return self._attach(devs)
 
@@ -92,12 +83,20 @@ class TangoControlSystem(ControlSystem):
         newDevs = []
         for d in devs:
             if d is not None:
-                if self._cfg.tango_host:
-                    full_name = "//" + self._cfg.tango_host + "/" + d._cfg.attribute
+                try:
+                    attribute = d.get_tango_attribute()
+                except AttributeError as exc:
+                    raise PyAMLException(
+                        f"Cannot attach device {d!r}: expected a Tango attribute with get_tango_attribute()."
+                    ) from exc
+
+                tango_host = self.get_tango_host()
+                if tango_host:
+                    full_name = "//" + tango_host + "/" + attribute
                 else:
-                    full_name = d._cfg.attribute
+                    full_name = attribute
                 if full_name not in self.__devices:
-                    self.__devices[full_name] = self.__newref(d, full_name)
+                    self.__devices[full_name] = d.clone_with_tango_attribute(full_name)
                 newDevs.append(self.__devices[full_name])
             else:
                 newDevs.append(None)
@@ -113,6 +112,17 @@ class TangoControlSystem(ControlSystem):
             Name of the control system.
         """
         return self._cfg.name
+
+    def get_tango_host(self) -> str | None:
+        """
+        Return the Tango host configured for this control system.
+
+        Returns
+        -------
+        str | None
+            Tango host URL, or ``None`` when unconfigured.
+        """
+        return self._cfg.tango_host
 
     def scalar_aggregator(self) -> str | None:
         """

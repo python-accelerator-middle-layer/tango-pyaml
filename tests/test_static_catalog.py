@@ -11,7 +11,9 @@ from tango.pyaml.static_catalog_entry import ConfigModel as EntryConfigModel
 from tango.pyaml.static_catalog_entry import StaticCatalogEntry
 
 
-def make_attribute(path: str = "domain/family/member/attr", unit: str = "mm") -> Attribute:
+def make_attribute(
+    path: str = "domain/family/member/attr", unit: str = "mm"
+) -> Attribute:
     return Attribute(AttributeConfigModel(attribute=path, unit=unit))
 
 
@@ -76,7 +78,10 @@ def test_static_catalog_resolves_multiple_entries():
     device_x = make_attribute("sr/bpm/c01-01/x")
     device_y = make_attribute("sr/bpm/c01-01/y")
     catalog = make_catalog(
-        entries=[make_entry("BPM/x", device=device_x), make_entry("BPM/y", device=device_y)]
+        entries=[
+            make_entry("BPM/x", device=device_x),
+            make_entry("BPM/y", device=device_y),
+        ]
     )
 
     assert catalog.resolve("BPM/x") is device_x
@@ -120,15 +125,19 @@ def test_static_catalog_is_shared_across_control_systems():
 
     assert live.get_catalog() is catalog
     assert ops.get_catalog() is catalog
-    assert live.resolve_device("BPM/x") is device
-    assert ops.resolve_device("BPM/x") is device
+    assert catalog.resolve("BPM/x") is device
+    assert live.get_device("BPM/x") is not device
+    assert ops.get_device("BPM/x") is not device
+    assert live.get_device("BPM/x") is not ops.get_device("BPM/x")
 
 
 # --- Integration with DeviceAccess types ---
 
 
 def test_static_catalog_works_with_attribute_read_only():
-    device = AttributeReadOnly(AttributeConfigModel(attribute="sr/bpm/c01-01/pos", unit="mm"))
+    device = AttributeReadOnly(
+        AttributeConfigModel(attribute="sr/bpm/c01-01/pos", unit="mm")
+    )
     catalog = make_catalog(entries=[make_entry("BPM/x", device=device)])
 
     resolved = catalog.resolve("BPM/x")
@@ -143,6 +152,7 @@ def test_static_catalog_can_be_used_through_tango_control_system():
     control_system = TangoControlSystem(TangoControlSystemConfigModel(name="live"))
     control_system.set_catalog(catalog)
 
-    resolved = control_system.resolve_device("BPM/x")
+    resolved = control_system.get_device("BPM/x")
 
-    assert resolved is device
+    assert resolved is not device
+    assert resolved.name() == "sr/bpm/c01-01/x"

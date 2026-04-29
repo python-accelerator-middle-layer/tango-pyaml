@@ -2,10 +2,11 @@ import logging
 
 from tango.pyaml.static_catalog import ConfigModel as StaticCatalogConfigModel
 from tango.pyaml.static_catalog import StaticCatalog
-from tango.pyaml.static_catalog_entry import ConfigModel as StaticCatalogEntryConfigModel
+from tango.pyaml.static_catalog_entry import (
+    ConfigModel as StaticCatalogEntryConfigModel,
+)
 from tango.pyaml.static_catalog_entry import StaticCatalogEntry
 from tango.pyaml.controlsystem import ConfigModel, TangoControlSystem
-
 
 from .mocked_device_proxy import MockedDeviceProxy
 from unittest.mock import patch
@@ -65,16 +66,23 @@ def test_catalog_can_be_configured_and_resolved():
     )
 
     cs.set_catalog(catalog)
-    resolved = cs.resolve_device("BPM_C01-01/x")
-    attached = cs.attach([resolved])[0]
+    resolved = cs.get_device("BPM_C01-01/x")
 
     assert cs.get_catalog_config() is catalog
     assert cs.get_catalog() is catalog
-    assert resolved is device
-    assert attached.name() == "//tangodb:10000/sys/tg_test/1/float_scalar"
+    assert catalog.resolve("BPM_C01-01/x") is device
+    assert resolved.name() == "//tangodb:10000/sys/tg_test/1/float_scalar"
 
 
 def test_named_catalog_config_is_accepted():
     cfg = ConfigModel(name="test_tango_cs", catalog="device-catalog")
 
     assert cfg.catalog == "device-catalog"
+
+
+def test_tango_control_system_exposes_tango_host():
+    cs = TangoControlSystem(
+        ConfigModel(name="test_tango_cs", tango_host="tangodb:10000")
+    )
+
+    assert cs.get_tango_host() == "tangodb:10000"

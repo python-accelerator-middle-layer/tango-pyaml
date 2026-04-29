@@ -1,3 +1,4 @@
+import copy
 import logging
 from typing import Optional, Tuple
 
@@ -204,6 +205,31 @@ class Attribute(DeviceAccess, InitializableElement):
         if self._index is not None:
             return f"{self._cfg.attribute}[{self._index}]"
         return self._cfg.attribute
+
+    def get_tango_attribute(self) -> str:
+        """
+        Return the raw Tango attribute path without index decoration.
+
+        Returns
+        -------
+        str
+            Tango attribute path stored in the configuration.
+        """
+        return self._cfg.attribute
+
+    def clone_with_tango_attribute(self, attribute: str) -> "Attribute":
+        """
+        Return a shallow copy configured with another Tango attribute path.
+
+        Parameters
+        ----------
+        attribute : str
+            Tango attribute path to store in the cloned instance.
+        """
+        new_obj = copy.copy(self)
+        new_obj._cfg = copy.copy(self._cfg)
+        new_obj._cfg.attribute = attribute
+        return new_obj
 
     def measure_name(self) -> str:
         """

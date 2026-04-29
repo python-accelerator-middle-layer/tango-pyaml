@@ -1,6 +1,7 @@
 import tango
 import pyaml
 
+from typing import TYPE_CHECKING
 from pydantic import ConfigDict
 from pyaml.configuration.catalog import Catalog, CatalogConfigModel, CatalogResolver
 from pyaml.control.deviceaccess import DeviceAccess
@@ -10,6 +11,9 @@ from .attribute_read_only import AttributeReadOnly
 from .tango_pyaml_utils import tango_to_PyAMLException, to_float_or_none
 
 PYAMLCLASS = "TangoCatalog"
+
+if TYPE_CHECKING:
+    from .controlsystem import TangoControlSystem
 
 
 class ConfigModel(CatalogConfigModel):
@@ -40,11 +44,13 @@ class TangoCatalog(Catalog):
 
     def resolve(self, key: str) -> DeviceAccess:
         raise pyaml.PyAMLException(
-            f"Tango catalog '{self.get_name()}' must be attached to a TangoControlSystem "
-            f"before resolving key '{key}'"
+            f"Tango catalog '{self.get_name()}' must be attached to a TangoControlSystem before resolving key '{key}'"
         )
 
-    def attach_control_system(self, control_system):
+    def is_disconnected(self) -> bool:
+        return self._cfg.disconnected
+
+    def attach_control_system(self, control_system: object) -> "TangoCatalogResolver":
         from .controlsystem import TangoControlSystem
 
         if not isinstance(control_system, TangoControlSystem):
@@ -78,7 +84,7 @@ class TangoCatalogResolver(CatalogResolver):
         tango.AttrWriteType.READ_WITH_WRITE,
     }
 
-    def __init__(self, catalog: TangoCatalog, control_system):
+    def __init__(self, catalog: TangoCatalog, control_system: "TangoControlSystem"):
         self._catalog = catalog
         self._control_system = control_system
         # Resolved DeviceAccess objects are bound to one control system context,
@@ -110,12 +116,12 @@ class TangoCatalogResolver(CatalogResolver):
 
         if key not in self._refs:
             if index is not None:
-                if self._catalog._cfg.disconnected:
+                if self._catalog.is_disconnected():
                     self._refs[key] = self._build_disconnected_indexed(attr_path, index)
                 else:
                     self._refs[key] = self._build_connected_indexed(attr_path, index)
             else:
-                if self._catalog._cfg.disconnected:
+                if self._catalog.is_disconnected():
                     self._refs[key] = self._build_disconnected_attribute(key)
                 else:
                     self._refs[key] = self._build_connected_attribute(key)
@@ -157,19 +163,17 @@ class TangoCatalogResolver(CatalogResolver):
         """
         if not isinstance(key, str):
             raise pyaml.PyAMLException(
-                f"Tango catalog '{self._catalog.get_name()}' expects string keys, "
-                f"got {type(key).__name__}"
+                f"Tango catalog '{self._catalog.get_name()}' expects string keys, got {type(key).__name__}"
             )
 
         if "@" in key:
             attr_path, idx_str = key.rsplit("@", 1)
             try:
                 index = int(idx_str)
-            except ValueError:
+            except ValueError as exc:
                 raise pyaml.PyAMLException(
-                    f"Tango catalog '{self._catalog.get_name()}' invalid index "
-                    f"'{idx_str}' in key '{key}'."
-                )
+                    f"Tango catalog '{self._catalog.get_name()}' invalid index '{idx_str}' in key '{key}'."
+                ) from exc
         else:
             attr_path = key
             index = None
@@ -194,30 +198,29 @@ class TangoCatalogResolver(CatalogResolver):
         # Cannot verify SPECTRUM in disconnected mode; store FMT_UNKNOWN.
         key = f"{attr_path}@{index}"
         self._data_formats[key] = tango.AttrDataFormat.FMT_UNKNOWN
-        return Attribute(AttributeConfigModel(attribute=attr_path, index=index, range=(None, None)))
+        return Attribute(
+            AttributeConfigModel(attribute=attr_path, index=index, range=(None, None))
+        )
 
     def _build_connected_attribute(self, key: str) -> DeviceAccess:
+        tango_attr_name = self._tango_attribute_name(key)
         try:
             # AttributeProxy.get_config() is the most direct way to retrieve
             # writability, unit, range and data format from Tango.
-            attr_config = tango.AttributeProxy(key).get_config()
+            attr_config = tango.AttributeProxy(tango_attr_name).get_config()
         except tango.DevFailed as df:
             pyaml_exception = tango_to_PyAMLException(df)
             raise pyaml.PyAMLException(
                 f"Tango catalog '{self._catalog.get_name()}' cannot resolve '{key}': {pyaml_exception}"
             ) from df
 
-        unit = getattr(attr_config, "unit", "") or ""
-        self._data_formats[key] = getattr(
-            attr_config, "data_format", tango.AttrDataFormat.FMT_UNKNOWN
+        unit, attr_range, data_format, writable = self._read_config_metadata(
+            attr_config, key
         )
-        attr_range = (
-            to_float_or_none(getattr(attr_config, "min_value", None)),
-            to_float_or_none(getattr(attr_config, "max_value", None)),
-        )
+        self._data_formats[key] = data_format
         cfg = AttributeConfigModel(attribute=key, unit=unit, range=attr_range)
 
-        if getattr(attr_config, "writable", tango.AttrWriteType.WT_UNKNOWN) in self._WRITABLE_TYPES:
+        if writable in self._WRITABLE_TYPES:
             return Attribute(cfg)
         return AttributeReadOnly(cfg)
 
@@ -231,29 +234,59 @@ class TangoCatalogResolver(CatalogResolver):
             If the Tango call fails or the attribute is not a SPECTRUM.
         """
         key = f"{attr_path}@{index}"
+        tango_attr_name = self._tango_attribute_name(attr_path)
         try:
-            attr_config = tango.AttributeProxy(attr_path).get_config()
+            attr_config = tango.AttributeProxy(tango_attr_name).get_config()
         except tango.DevFailed as df:
             pyaml_exception = tango_to_PyAMLException(df)
             raise pyaml.PyAMLException(
                 f"Tango catalog '{self._catalog.get_name()}' cannot resolve '{key}': {pyaml_exception}"
             ) from df
 
-        data_format = getattr(attr_config, "data_format", tango.AttrDataFormat.FMT_UNKNOWN)
+        unit, attr_range, data_format, writable = self._read_config_metadata(
+            attr_config, key
+        )
         if data_format != tango.AttrDataFormat.SPECTRUM:
             raise pyaml.PyAMLException(
                 f"Tango catalog '{self._catalog.get_name()}' cannot use '{key}' as an indexed "
                 "key: the Tango attribute is not a SPECTRUM."
             )
 
-        unit = getattr(attr_config, "unit", "") or ""
         self._data_formats[key] = tango.AttrDataFormat.SPECTRUM
-        attr_range = (
-            to_float_or_none(getattr(attr_config, "min_value", None)),
-            to_float_or_none(getattr(attr_config, "max_value", None)),
+        cfg = AttributeConfigModel(
+            attribute=attr_path, index=index, unit=unit, range=attr_range
         )
-        cfg = AttributeConfigModel(attribute=attr_path, index=index, unit=unit, range=attr_range)
 
-        if getattr(attr_config, "writable", tango.AttrWriteType.WT_UNKNOWN) in self._WRITABLE_TYPES:
+        if writable in self._WRITABLE_TYPES:
             return Attribute(cfg)
         return AttributeReadOnly(cfg)
+
+    def _read_config_metadata(
+        self, attr_config, key: str
+    ) -> tuple[
+        str,
+        tuple[float | None, float | None],
+        tango.AttrDataFormat,
+        tango.AttrWriteType,
+    ]:
+        try:
+            unit = attr_config.unit or ""
+            attr_range = (
+                to_float_or_none(attr_config.min_value),
+                to_float_or_none(attr_config.max_value),
+            )
+            data_format = attr_config.data_format
+            writable = attr_config.writable
+        except AttributeError as exc:
+            raise pyaml.PyAMLException(
+                f"Tango catalog '{self._catalog.get_name()}' cannot resolve '{key}': "
+                f"incomplete Tango attribute config, missing '{exc.name}'."
+            ) from exc
+
+        return unit, attr_range, data_format, writable
+
+    def _tango_attribute_name(self, attr_path: str) -> str:
+        tango_host = self._control_system.get_tango_host()
+        if tango_host:
+            return f"//{tango_host}/{attr_path}"
+        return attr_path
