@@ -6,6 +6,16 @@ from pyaml.configuration.catalog import Catalog
 from pyaml.control.controlsystem import ControlSystem
 from pyaml.control.deviceaccess import DeviceAccess
 from . import __version__
+from .attribute import Attribute, ConfigModel as AttributeConfigModel
+from .attribute_list import AttributeList, ConfigModel as AttributeListConfigModel
+from .attribute_list_read_only import (
+    AttributeListReadOnly,
+    ConfigModel as AttributeListReadOnlyConfigModel,
+)
+from .attribute_read_only import (
+    AttributeReadOnly,
+    ConfigModel as AttributeReadOnlyConfigModel,
+)
 
 PYAMLCLASS: str = "TangoControlSystem"
 
@@ -101,6 +111,93 @@ class TangoControlSystem(ControlSystem):
             else:
                 newDevs.append(None)
         return newDevs
+
+    def get_device(self, ref: str | BaseModel | None) -> DeviceAccess | None:
+        """
+        Resolve a public device reference for this Tango control system.
+
+        YAML references are opaque strings resolved by the configured backend
+        catalog. Public Python APIs may pass Tango backend configuration models.
+        Already constructed DeviceAccess instances are intentionally rejected:
+        attach() remains the internal compatibility API for those.
+        """
+        if ref is None:
+            return None
+
+        if isinstance(ref, DeviceAccess):
+            raise PyAMLException(
+                "TangoControlSystem.get_device() expects a catalog key, Tango "
+                "ConfigModel, or None. Use attach() for already constructed "
+                "DeviceAccess objects."
+            )
+
+        if isinstance(ref, str):
+            catalog = self.get_catalog()
+            if catalog is None:
+                raise PyAMLException(
+                    f"TangoControlSystem '{self.name()}' has no catalog configured."
+                )
+            if not isinstance(catalog, Catalog):
+                raise PyAMLException(
+                    f"TangoControlSystem '{self.name()}' has unsupported catalog type "
+                    f"{type(catalog).__name__}."
+                )
+            try:
+                resolve = catalog.resolve
+            except AttributeError as exc:
+                raise PyAMLException(
+                    f"Catalog '{catalog.get_name()}' cannot resolve key '{ref}': "
+                    "missing backend resolve() method."
+                ) from exc
+            device = resolve(ref, self)
+            return self.attach([device])[0]
+
+        if isinstance(ref, AttributeReadOnlyConfigModel):
+            return self.attach([AttributeReadOnly(ref)])[0]
+
+        if isinstance(ref, AttributeConfigModel):
+            return self.attach([Attribute(ref)])[0]
+
+        if isinstance(ref, AttributeListReadOnlyConfigModel):
+            return AttributeListReadOnly(self._attach_attribute_list_config(ref))
+
+        if isinstance(ref, AttributeListConfigModel):
+            return AttributeList(self._attach_attribute_list_config(ref))
+
+        if isinstance(ref, BaseModel):
+            raise PyAMLException(
+                f"TangoControlSystem cannot construct a device from config model "
+                f"{type(ref).__name__}."
+            )
+
+        raise PyAMLException(
+            f"TangoControlSystem.get_device() cannot resolve references of type "
+            f"{type(ref).__name__}; expected str, Tango ConfigModel, or None."
+        )
+
+    def get_catalog_config(self) -> Catalog | str | None:
+        """
+        Return the catalog configured for this Tango control system.
+
+        PyAML keeps this value as backend configuration only; runtime catalog
+        resolution is owned by ``get_device()``.
+        """
+        return self._cfg.catalog
+
+    def _attach_attribute_list_config(
+        self, cfg: AttributeListConfigModel
+    ) -> AttributeListConfigModel:
+        tango_host = self.get_tango_host()
+        if not tango_host:
+            return cfg
+
+        return cfg.model_copy(
+            update={
+                "attributes": [
+                    f"//{tango_host}/{attribute}" for attribute in cfg.attributes
+                ]
+            }
+        )
 
     def name(self) -> str:
         """

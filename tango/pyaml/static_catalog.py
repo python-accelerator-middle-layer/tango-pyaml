@@ -49,15 +49,19 @@ class StaticCatalog(Catalog):
     def __init__(self, cfg: ConfigModel):
         super().__init__(cfg)
         if len(cfg.entries) == 0:
-            raise PyAMLException("StaticCatalog.entries must contain at least one entry")
+            raise PyAMLException(
+                "StaticCatalog.entries must contain at least one entry"
+            )
         self._refs: dict[str, DeviceAccess] = {}
         for entry in cfg.entries:
             key = entry.get_key()
             if key in self._refs:
-                raise PyAMLException(f"StaticCatalog.entries contains duplicate key '{key}'")
+                raise PyAMLException(
+                    f"StaticCatalog.entries contains duplicate key '{key}'"
+                )
             self._refs[key] = entry.get_device()
 
-    def resolve(self, key: str) -> DeviceAccess:
+    def resolve(self, key: str, control_system: object | None = None) -> DeviceAccess:
         """
         Return the device associated with ``key``.
 
@@ -65,6 +69,9 @@ class StaticCatalog(Catalog):
         ----------
         key : str
             Catalog key to resolve.
+        control_system : object | None
+            Optional backend context. Static catalogs do not need it, but the
+            argument keeps the backend catalog API uniform.
 
         Returns
         -------
@@ -79,4 +86,6 @@ class StaticCatalog(Catalog):
         try:
             return self._refs[key]
         except KeyError as exc:
-            raise PyAMLException(f"Catalog '{self.get_name()}' cannot resolve key '{key}'") from exc
+            raise PyAMLException(
+                f"Catalog '{self.get_name()}' cannot resolve key '{key}'"
+            ) from exc

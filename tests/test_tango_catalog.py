@@ -13,17 +13,18 @@ from tango.pyaml.controlsystem import TangoControlSystem
 from tango.pyaml.tango_catalog import ConfigModel, TangoCatalog
 
 
-def build_resolver(catalog: TangoCatalog, name="live"):
+def build_control_system(catalog: TangoCatalog, name="live"):
     control_system = TangoControlSystem(TangoControlSystemConfigModel(name=name))
-    return catalog.attach_control_system(control_system)
+    control_system.set_catalog(catalog)
+    return control_system
 
 
 def test_tango_catalog_disconnected_resolves_without_querying_tango():
     catalog = TangoCatalog(ConfigModel(name="tango-direct", disconnected=True))
-    resolver = build_resolver(catalog)
+    control_system = build_control_system(catalog)
 
     with patch("tango.AttributeProxy") as attr_proxy:
-        device = resolver.resolve("domain/family/member/attribute")
+        device = catalog.resolve("domain/family/member/attribute", control_system)
 
     attr_proxy.assert_not_called()
     assert isinstance(device, Attribute)
@@ -42,13 +43,13 @@ def test_tango_catalog_connected_resolves_writable_attribute():
         data_format=tango.AttrDataFormat.SPECTRUM,
     )
     catalog = TangoCatalog(ConfigModel(name="tango-direct"))
-    resolver = build_resolver(catalog)
+    control_system = build_control_system(catalog)
 
     with patch(
         "tango.AttributeProxy",
         return_value=MockedAttributeProxy("domain/family/member/current", attr_config),
     ):
-        device = resolver.resolve("domain/family/member/current")
+        device = catalog.resolve("domain/family/member/current", control_system)
 
     assert isinstance(device, Attribute)
     assert not isinstance(device, AttributeReadOnly)
@@ -56,7 +57,7 @@ def test_tango_catalog_connected_resolves_writable_attribute():
     assert device.unit() == "A"
     assert device.get_range() == [-10.5, 12.0]
     assert (
-        resolver.get_data_format("domain/family/member/current")
+        catalog.get_data_format("domain/family/member/current", control_system)
         == tango.AttrDataFormat.SPECTRUM
     )
 
@@ -66,13 +67,13 @@ def test_tango_catalog_connected_resolves_read_only_attribute():
         name="position", writable=tango.AttrWriteType.READ, unit="mm"
     )
     catalog = TangoCatalog(ConfigModel(name="tango-direct"))
-    resolver = build_resolver(catalog)
+    control_system = build_control_system(catalog)
 
     with patch(
         "tango.AttributeProxy",
         return_value=MockedAttributeProxy("domain/family/member/position", attr_config),
     ):
-        device = resolver.resolve("domain/family/member/position")
+        device = catalog.resolve("domain/family/member/position", control_system)
 
     assert isinstance(device, AttributeReadOnly)
     assert device.unit() == "mm"
@@ -80,14 +81,14 @@ def test_tango_catalog_connected_resolves_read_only_attribute():
 
 def test_tango_catalog_caches_resolved_devices():
     catalog = TangoCatalog(ConfigModel(name="tango-direct"))
-    resolver = build_resolver(catalog)
+    control_system = build_control_system(catalog)
 
     with patch(
         "tango.AttributeProxy",
         return_value=MockedAttributeProxy("domain/family/member/attribute"),
     ) as attr_proxy:
-        first = resolver.resolve("domain/family/member/attribute")
-        second = resolver.resolve("domain/family/member/attribute")
+        first = catalog.resolve("domain/family/member/attribute", control_system)
+        second = catalog.resolve("domain/family/member/attribute", control_system)
 
     attr_proxy.assert_called_once_with("domain/family/member/attribute")
     assert first is second
@@ -95,16 +96,16 @@ def test_tango_catalog_caches_resolved_devices():
 
 def test_tango_catalog_cache_is_bound_to_control_system_resolver():
     catalog = TangoCatalog(ConfigModel(name="tango-direct"))
-    live_resolver = build_resolver(catalog, name="live")
-    ops_resolver = build_resolver(catalog, name="ops")
+    live = build_control_system(catalog, name="live")
+    ops = build_control_system(catalog, name="ops")
 
     with patch(
         "tango.AttributeProxy",
         return_value=MockedAttributeProxy("domain/family/member/attribute"),
     ) as attr_proxy:
-        live_first = live_resolver.resolve("domain/family/member/attribute")
-        live_second = live_resolver.resolve("domain/family/member/attribute")
-        ops_device = ops_resolver.resolve("domain/family/member/attribute")
+        live_first = catalog.resolve("domain/family/member/attribute", live)
+        live_second = catalog.resolve("domain/family/member/attribute", live)
+        ops_device = catalog.resolve("domain/family/member/attribute", ops)
 
     assert attr_proxy.call_count == 2
     assert live_first is live_second
@@ -168,9 +169,9 @@ def test_tango_catalog_rejects_non_tango_control_system():
     catalog = TangoCatalog(ConfigModel(name="tango-direct"))
 
     with pytest.raises(
-        pyaml.PyAMLException, match="can only be attached to TangoControlSystem"
+        pyaml.PyAMLException, match="can only resolve through TangoControlSystem"
     ):
-        catalog.attach_control_system(ControlSystemAdapter())
+        catalog.resolve("domain/family/member/attribute", ControlSystemAdapter())
 
 
 def test_tango_catalog_rejects_external_tango_control_system_class():
@@ -180,44 +181,44 @@ def test_tango_catalog_rejects_external_tango_control_system_class():
     catalog = TangoCatalog(ConfigModel(name="tango-direct"))
 
     with pytest.raises(
-        pyaml.PyAMLException, match="can only be attached to TangoControlSystem"
+        pyaml.PyAMLException, match="can only resolve through TangoControlSystem"
     ):
-        catalog.attach_control_system(TangoControlSystem())
+        catalog.resolve("domain/family/member/attribute", TangoControlSystem())
 
 
 def test_tango_catalog_requires_control_system_attachment():
     catalog = TangoCatalog(ConfigModel(name="tango-direct"))
 
     with pytest.raises(
-        pyaml.PyAMLException, match="must be attached to a TangoControlSystem"
+        pyaml.PyAMLException, match="needs a TangoControlSystem context"
     ):
         catalog.resolve("domain/family/member/attribute")
 
 
 def test_tango_catalog_rejects_invalid_tango_reference():
     catalog = TangoCatalog(ConfigModel(name="tango-direct"))
-    resolver = build_resolver(catalog)
+    control_system = build_control_system(catalog)
 
     with pytest.raises(
         pyaml.PyAMLException, match="Expected 'domain/family/member/attribute'"
     ):
-        resolver.resolve("domain/family/member")
+        catalog.resolve("domain/family/member", control_system)
 
 
 def test_tango_catalog_rejects_invalid_index():
     catalog = TangoCatalog(ConfigModel(name="tango-direct"))
-    resolver = build_resolver(catalog)
+    control_system = build_control_system(catalog)
 
     with pytest.raises(pyaml.PyAMLException, match="invalid index"):
-        resolver.resolve("domain/family/member/attribute@notanint")
+        catalog.resolve("domain/family/member/attribute@notanint", control_system)
 
 
 def test_tango_catalog_disconnected_resolves_indexed_attribute():
     catalog = TangoCatalog(ConfigModel(name="tango-direct", disconnected=True))
-    resolver = build_resolver(catalog)
+    control_system = build_control_system(catalog)
 
     with patch("tango.AttributeProxy") as attr_proxy:
-        device = resolver.resolve("domain/family/member/attribute@1")
+        device = catalog.resolve("domain/family/member/attribute@1", control_system)
 
     attr_proxy.assert_not_called()
     assert isinstance(device, Attribute) and device._index is not None
@@ -234,20 +235,20 @@ def test_tango_catalog_connected_resolves_indexed_writable_spectrum():
         data_format=tango.AttrDataFormat.SPECTRUM,
     )
     catalog = TangoCatalog(ConfigModel(name="tango-direct"))
-    resolver = build_resolver(catalog)
+    control_system = build_control_system(catalog)
 
     with patch(
         "tango.AttributeProxy",
         return_value=MockedAttributeProxy("domain/family/member/position", attr_config),
     ):
-        device = resolver.resolve("domain/family/member/position@0")
+        device = catalog.resolve("domain/family/member/position@0", control_system)
 
     assert isinstance(device, Attribute) and device._index is not None
     assert not isinstance(device, AttributeReadOnly)
     assert device.name() == "domain/family/member/position[0]"
     assert device.unit() == "mm"
     assert (
-        resolver.get_data_format("domain/family/member/position@0")
+        catalog.get_data_format("domain/family/member/position@0", control_system)
         == tango.AttrDataFormat.SPECTRUM
     )
 
@@ -260,13 +261,13 @@ def test_tango_catalog_connected_resolves_indexed_read_only_spectrum():
         data_format=tango.AttrDataFormat.SPECTRUM,
     )
     catalog = TangoCatalog(ConfigModel(name="tango-direct"))
-    resolver = build_resolver(catalog)
+    control_system = build_control_system(catalog)
 
     with patch(
         "tango.AttributeProxy",
         return_value=MockedAttributeProxy("domain/family/member/position", attr_config),
     ):
-        device = resolver.resolve("domain/family/member/position@2")
+        device = catalog.resolve("domain/family/member/position@2", control_system)
 
     assert isinstance(device, AttributeReadOnly) and device._index is not None
     assert device.unit() == "mm"
@@ -279,14 +280,14 @@ def test_tango_catalog_connected_rejects_indexed_scalar_attribute():
         data_format=tango.AttrDataFormat.SCALAR,
     )
     catalog = TangoCatalog(ConfigModel(name="tango-direct"))
-    resolver = build_resolver(catalog)
+    control_system = build_control_system(catalog)
 
     with patch(
         "tango.AttributeProxy",
         return_value=MockedAttributeProxy("domain/family/member/current", attr_config),
     ):
         with pytest.raises(pyaml.PyAMLException, match="not a SPECTRUM"):
-            resolver.resolve("domain/family/member/current@0")
+            catalog.resolve("domain/family/member/current@0", control_system)
 
 
 def test_tango_catalog_indexed_caches_resolved_devices():
@@ -295,14 +296,14 @@ def test_tango_catalog_indexed_caches_resolved_devices():
         data_format=tango.AttrDataFormat.SPECTRUM,
     )
     catalog = TangoCatalog(ConfigModel(name="tango-direct"))
-    resolver = build_resolver(catalog)
+    control_system = build_control_system(catalog)
 
     with patch(
         "tango.AttributeProxy",
         return_value=MockedAttributeProxy("domain/family/member/position", attr_config),
     ) as attr_proxy:
-        first = resolver.resolve("domain/family/member/position@1")
-        second = resolver.resolve("domain/family/member/position@1")
+        first = catalog.resolve("domain/family/member/position@1", control_system)
+        second = catalog.resolve("domain/family/member/position@1", control_system)
 
     attr_proxy.assert_called_once_with("domain/family/member/position")
     assert first is second
@@ -310,14 +311,14 @@ def test_tango_catalog_indexed_caches_resolved_devices():
 
 def test_tango_catalog_wraps_tango_errors():
     catalog = TangoCatalog(ConfigModel(name="tango-direct"))
-    resolver = build_resolver(catalog)
+    control_system = build_control_system(catalog)
 
     with patch("tango.AttributeProxy", side_effect=tango.DevFailed()):
         with pytest.raises(
             pyaml.PyAMLException,
             match="Tango catalog 'tango-direct' cannot resolve 'domain/family/member/attribute'",
         ):
-            resolver.resolve("domain/family/member/attribute")
+            catalog.resolve("domain/family/member/attribute", control_system)
 
 
 def test_tango_catalog_rejects_incomplete_tango_config():
@@ -328,7 +329,7 @@ def test_tango_catalog_rejects_incomplete_tango_config():
         data_format = tango.AttrDataFormat.SCALAR
 
     catalog = TangoCatalog(ConfigModel(name="tango-direct"))
-    resolver = build_resolver(catalog)
+    control_system = build_control_system(catalog)
 
     with patch(
         "tango.AttributeProxy",
@@ -340,4 +341,4 @@ def test_tango_catalog_rejects_incomplete_tango_config():
             pyaml.PyAMLException,
             match="incomplete Tango attribute config, missing 'writable'",
         ):
-            resolver.resolve("domain/family/member/attribute")
+            catalog.resolve("domain/family/member/attribute", control_system)

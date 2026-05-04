@@ -85,6 +85,17 @@ class AttributeList(DeviceAccess, InitializableElement):
         """
         return self._cfg.name
 
+    def get_tango_attributes(self) -> list[str]:
+        """
+        Return the raw Tango attribute paths stored in the configuration.
+
+        Returns
+        -------
+        list[str]
+            Tango attribute paths in configured order.
+        """
+        return self._cfg.attributes
+
     def set(self, value: float):
         """
         Write a value asynchronously to all Tango attributes.

@@ -102,18 +102,6 @@ def test_static_catalog_error_includes_catalog_name():
         catalog.resolve("missing")
 
 
-# --- attach_control_system ---
-
-
-def test_static_catalog_attach_control_system_returns_self():
-    catalog = make_catalog()
-    control_system = TangoControlSystem(TangoControlSystemConfigModel(name="live"))
-
-    resolver = catalog.attach_control_system(control_system)
-
-    assert resolver is catalog
-
-
 def test_static_catalog_is_shared_across_control_systems():
     device = make_attribute()
     catalog = make_catalog(entries=[make_entry("BPM/x", device=device)])
