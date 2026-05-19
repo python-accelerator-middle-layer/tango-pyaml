@@ -21,8 +21,8 @@ class ConfigModel(BaseModel):
         Name of the control system.
     tango_host : str
         Tango host URL. Default is the TANGO_HOST variable.
-    debug_level : int
-        Debug verbosity level.
+    debug_level : str | int | None
+        Debug verbosity level. Such as INFO, DEBUG, WARNING, ERROR, CRITICAL. Or 10, 20, 30, 40, 50.
     scalar_aggregator : str
         Aggregator module for scalar values. If none specified, writings and readings of sclar value are serialized.
     vector_aggregator : str
@@ -33,7 +33,7 @@ class ConfigModel(BaseModel):
 
     name: str
     tango_host: str | None = None
-    debug_level: str = None
+    debug_level: str | int | None = None
     lazy_devices: bool = True
     scalar_aggregator: str | None = "tango.pyaml.multi_attribute"
     vector_aggregator: str | None = None
