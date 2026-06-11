@@ -219,6 +219,28 @@ class TangoControlSystem(ControlSystem):
         """Returns a new empty DeviceAccessList. If None is returned serialized readings/writtings are performed"""
         return MultiAttribute()
 
+    def scalar_aggregator(self) -> str | None:
+        """
+        Returns the module name used for handling aggregator of DeviceAccess
+
+        Returns
+        -------
+        str
+            Aggregator module name
+        """
+        return None
+
+    def vector_aggregator(self) -> str | None:
+        """
+        Returns the module name used for handling aggregator of DeviceVectorAccess
+
+        Returns
+        -------
+        str
+            Aggregator module name
+        """
+        return None
+
     def get_catalog(self) -> Catalog | None:
         """
         Returns the catalog that references all control systems devices.
