@@ -1,8 +1,8 @@
 import logging
 
 from pydantic import BaseModel, ConfigDict
+
 from pyaml import PyAMLException
-from pyaml.configuration.catalog import Catalog
 from pyaml.control.controlsystem import ControlSystem
 from pyaml.control.deviceaccess import DeviceAccess
 from . import __version__
@@ -16,6 +16,8 @@ from .attribute_read_only import (
     AttributeReadOnly,
     ConfigModel as AttributeReadOnlyConfigModel,
 )
+from .catalog import Catalog
+from .multi_attribute import MultiAttribute
 
 PYAMLCLASS: str = "TangoControlSystem"
 
@@ -32,8 +34,8 @@ class ConfigModel(BaseModel):
         Name of the control system.
     tango_host : str
         Tango host URL. Default is the TANGO_HOST variable.
-    catalog : Catalog | str | None
-        Catalog instance or catalog name used to resolve PyAML device keys.
+    catalog : Catalog | None
+        Catalog instance used to resolve PyAML device keys.
     debug_level : int
         Debug verbosity level.
     scalar_aggregator : str
@@ -48,7 +50,7 @@ class ConfigModel(BaseModel):
 
     name: str
     tango_host: str | None = None
-    catalog: Catalog | str | None = None
+    catalog: Catalog | None = None
     debug_level: str | None = None
     lazy_devices: bool = True
     scalar_aggregator: str | None = "tango.pyaml.multi_attribute"
@@ -150,13 +152,13 @@ class TangoControlSystem(ControlSystem):
                     "missing backend resolve() method."
                 ) from exc
             device = resolve(ref, self)
-            return self.attach([device])[0]
+            return self._attach([device])[0]
 
         if isinstance(ref, AttributeReadOnlyConfigModel):
-            return self.attach([AttributeReadOnly(ref)])[0]
+            return self._attach([AttributeReadOnly(ref)])[0]
 
         if isinstance(ref, AttributeConfigModel):
-            return self.attach([Attribute(ref)])[0]
+            return self._attach([Attribute(ref)])[0]
 
         if isinstance(ref, AttributeListReadOnlyConfigModel):
             return AttributeListReadOnly(self._attach_attribute_list_config(ref))
@@ -174,15 +176,6 @@ class TangoControlSystem(ControlSystem):
             f"TangoControlSystem.get_device() cannot resolve references of type "
             f"{type(ref).__name__}; expected str, Tango ConfigModel, or None."
         )
-
-    def get_catalog_config(self) -> Catalog | str | None:
-        """
-        Return the catalog configured for this Tango control system.
-
-        PyAML keeps this value as backend configuration only; runtime catalog
-        resolution is owned by ``get_device()``.
-        """
-        return self._cfg.catalog
 
     def _attach_attribute_list_config(
         self, cfg: AttributeListConfigModel
@@ -242,6 +235,21 @@ class TangoControlSystem(ControlSystem):
             Aggregator module name
         """
         return self._cfg.vector_aggregator
+
+    def get_aggregator(self) -> MultiAttribute | None:
+        """Returns a new empty DeviceAccessList. If None is returned serialized readings/writtings are performed"""
+        return MultiAttribute()
+
+    def get_catalog(self) -> Catalog | None:
+        """
+        Returns the catalog that references all control systems devices.
+
+        Returns
+        -------
+        Catalog
+            The catalog
+        """
+        return self._cfg.catalog
 
     def __repr__(self):
         return repr(self._cfg).replace("ConfigModel", self.__class__.__name__)

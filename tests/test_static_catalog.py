@@ -26,7 +26,7 @@ def make_entry(key: str, device=None) -> StaticCatalogEntry:
 def make_catalog(name: str = "static", entries=None) -> StaticCatalog:
     if entries is None:
         entries = [make_entry("default/key")]
-    return StaticCatalog(StaticCatalogConfigModel(name=name, entries=entries))
+    return StaticCatalog(StaticCatalogConfigModel(entries=entries))
 
 
 # --- StaticCatalogEntry ---
@@ -48,18 +48,13 @@ def test_static_catalog_entry_returns_device():
 
 def test_static_catalog_rejects_empty_entries():
     with pytest.raises(pyaml.PyAMLException, match="must contain at least one entry"):
-        StaticCatalog(StaticCatalogConfigModel(name="empty", entries=[]))
+        StaticCatalog(StaticCatalogConfigModel(entries=[]))
 
 
 def test_static_catalog_rejects_duplicate_keys():
     entries = [make_entry("BPM/x"), make_entry("BPM/x")]
     with pytest.raises(pyaml.PyAMLException, match="duplicate key 'BPM/x'"):
-        StaticCatalog(StaticCatalogConfigModel(name="dup", entries=entries))
-
-
-def test_static_catalog_get_name():
-    catalog = make_catalog(name="my-catalog")
-    assert catalog.get_name() == "my-catalog"
+        StaticCatalog(StaticCatalogConfigModel(entries=entries))
 
 
 # --- StaticCatalog.resolve ---
@@ -95,21 +90,11 @@ def test_static_catalog_raises_on_unknown_key():
         catalog.resolve("BPM/y")
 
 
-def test_static_catalog_error_includes_catalog_name():
-    catalog = make_catalog(name="my-catalog", entries=[make_entry("BPM/x")])
-
-    with pytest.raises(pyaml.PyAMLException, match="Catalog 'my-catalog'"):
-        catalog.resolve("missing")
-
-
 def test_static_catalog_is_shared_across_control_systems():
     device = make_attribute()
     catalog = make_catalog(entries=[make_entry("BPM/x", device=device)])
-    live = TangoControlSystem(TangoControlSystemConfigModel(name="live"))
-    ops = TangoControlSystem(TangoControlSystemConfigModel(name="ops"))
-
-    live.set_catalog(catalog)
-    ops.set_catalog(catalog)
+    live = TangoControlSystem(TangoControlSystemConfigModel(name="live", catalog=catalog))
+    ops = TangoControlSystem(TangoControlSystemConfigModel(name="ops", catalog=catalog))
 
     assert live.get_catalog() is catalog
     assert ops.get_catalog() is catalog
@@ -137,8 +122,7 @@ def test_static_catalog_works_with_attribute_read_only():
 def test_static_catalog_can_be_used_through_tango_control_system():
     device = make_attribute("sr/bpm/c01-01/x", unit="mm")
     catalog = make_catalog(entries=[make_entry("BPM/x", device=device)])
-    control_system = TangoControlSystem(TangoControlSystemConfigModel(name="live"))
-    control_system.set_catalog(catalog)
+    control_system = TangoControlSystem(TangoControlSystemConfigModel(name="live", catalog=catalog))
 
     resolved = control_system.get_device("BPM/x")
 

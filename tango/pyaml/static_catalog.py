@@ -1,15 +1,15 @@
-from pydantic import ConfigDict
+from pydantic import ConfigDict, BaseModel
 
 from pyaml import PyAMLException
-from pyaml.configuration.catalog import Catalog, CatalogConfigModel
 from pyaml.control.deviceaccess import DeviceAccess
 
+from .catalog import Catalog
 from .static_catalog_entry import StaticCatalogEntry
 
 PYAMLCLASS = "StaticCatalog"
 
 
-class ConfigModel(CatalogConfigModel):
+class ConfigModel(BaseModel):
     """
     Configuration model for a static catalog.
 
@@ -47,7 +47,8 @@ class StaticCatalog(Catalog):
     """
 
     def __init__(self, cfg: ConfigModel):
-        super().__init__(cfg)
+        super().__init__()
+        self._cfg = cfg
         if len(cfg.entries) == 0:
             raise PyAMLException(
                 "StaticCatalog.entries must contain at least one entry"
@@ -87,5 +88,5 @@ class StaticCatalog(Catalog):
             return self._refs[key]
         except KeyError as exc:
             raise PyAMLException(
-                f"Catalog '{self.get_name()}' cannot resolve key '{key}'"
+                f"Catalog cannot resolve key '{key}'"
             ) from exc

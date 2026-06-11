@@ -55,7 +55,6 @@ def test_catalog_can_be_configured_and_resolved():
     )
     catalog = StaticCatalog(
         StaticCatalogConfigModel(
-            name="device-catalog",
             entries=[
                 StaticCatalogEntry(
                     StaticCatalogEntryConfigModel(
@@ -74,33 +73,11 @@ def test_catalog_can_be_configured_and_resolved():
         )
     )
 
-    cs.set_catalog(catalog)
     resolved = cs.get_device("BPM_C01-01/x")
 
-    assert cs.get_catalog_config() is catalog
     assert cs.get_catalog() is catalog
     assert catalog.resolve("BPM_C01-01/x") is device
     assert resolved.name() == "//tangodb:10000/sys/tg_test/1/float_scalar"
-
-
-def test_configured_catalog_instance_is_not_runtime_catalog_until_set():
-    device = Attribute(AttributeConfigModel(attribute="sys/tg_test/1/float_scalar"))
-    catalog = StaticCatalog(
-        StaticCatalogConfigModel(
-            name="device-catalog",
-            entries=[
-                StaticCatalogEntry(
-                    StaticCatalogEntryConfigModel(key="BPM_C01-01/x", device=device)
-                )
-            ],
-        )
-    )
-    cs = TangoControlSystem(ConfigModel(name="test_tango_cs", catalog=catalog))
-
-    assert cs.get_catalog_config() is catalog
-    assert cs.get_catalog() is None
-    with pytest.raises(pyaml.PyAMLException, match="has no catalog configured"):
-        cs.get_device("BPM_C01-01/x")
 
 
 def test_get_device_builds_attribute_from_config_model():
@@ -202,18 +179,10 @@ def test_get_device_requires_catalog_for_string_key():
         cs.get_device("BPM_C01-01/x")
 
 
-def test_get_device_rejects_unloaded_named_catalog():
-    cs = TangoControlSystem(ConfigModel(name="test_tango_cs", catalog="device-catalog"))
-
-    with pytest.raises(pyaml.PyAMLException, match="has no catalog configured"):
-        cs.get_device("BPM_C01-01/x")
-
-
 def test_get_device_reports_unknown_catalog_key():
     device = Attribute(AttributeConfigModel(attribute="sys/tg_test/1/float_scalar"))
     catalog = StaticCatalog(
         StaticCatalogConfigModel(
-            name="device-catalog",
             entries=[
                 StaticCatalogEntry(
                     StaticCatalogEntryConfigModel(key="BPM_C01-01/x", device=device)
@@ -222,7 +191,6 @@ def test_get_device_reports_unknown_catalog_key():
         )
     )
     cs = TangoControlSystem(ConfigModel(name="test_tango_cs", catalog=catalog))
-    cs.set_catalog(catalog)
 
     with pytest.raises(pyaml.PyAMLException, match="cannot resolve key 'BPM_C01-02/x'"):
         cs.get_device("BPM_C01-02/x")
@@ -233,14 +201,6 @@ def test_get_device_rejects_unknown_reference_type():
 
     with pytest.raises(pyaml.PyAMLException, match="type int"):
         cs.get_device(42)
-
-
-def test_named_catalog_config_is_accepted():
-    cfg = ConfigModel(name="test_tango_cs", catalog="device-catalog")
-    cs = TangoControlSystem(cfg)
-
-    assert cfg.catalog == "device-catalog"
-    assert cs.get_catalog_config() == "device-catalog"
 
 
 def test_tango_control_system_exposes_tango_host():

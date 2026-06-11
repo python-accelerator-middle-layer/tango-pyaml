@@ -1,18 +1,18 @@
 import tango
 import pyaml
 
-from pydantic import ConfigDict
-from pyaml.configuration.catalog import Catalog, CatalogConfigModel
+from pydantic import ConfigDict, BaseModel
 from pyaml.control.deviceaccess import DeviceAccess
 
 from .attribute import Attribute, ConfigModel as AttributeConfigModel
 from .attribute_read_only import AttributeReadOnly
+from .catalog import Catalog
 from .tango_pyaml_utils import tango_to_PyAMLException, to_float_or_none
 
 PYAMLCLASS = "TangoCatalog"
 
 
-class ConfigModel(CatalogConfigModel):
+class ConfigModel(BaseModel):
     """
     Configuration model for a Tango catalog.
 
@@ -45,7 +45,8 @@ class TangoCatalog(Catalog):
     }
 
     def __init__(self, cfg: ConfigModel):
-        super().__init__(cfg)
+        super().__init__()
+        self._cfg = cfg
         # Resolved DeviceAccess objects are bound to one control-system context
         # because metadata lookup depends on that control system's Tango host.
         self._refs: dict[tuple[int, str], DeviceAccess] = {}
@@ -143,14 +144,12 @@ class TangoCatalog(Catalog):
 
         if control_system is None:
             raise pyaml.PyAMLException(
-                f"Tango catalog '{self.get_name()}' needs a TangoControlSystem context "
+                f"Tango catalog needs a TangoControlSystem context "
                 f"before resolving key '{key}'"
             )
 
         if not isinstance(control_system, TangoControlSystem):
-            raise pyaml.PyAMLException(
-                f"Tango catalog '{self.get_name()}' can only resolve through TangoControlSystem"
-            )
+            raise pyaml.PyAMLException("Tango catalog can only resolve through TangoControlSystem")
 
     def _parse_key(self, key: str) -> tuple[str, int | None]:
         """
@@ -167,18 +166,14 @@ class TangoCatalog(Catalog):
             not a valid integer.
         """
         if not isinstance(key, str):
-            raise pyaml.PyAMLException(
-                f"Tango catalog '{self.get_name()}' expects string keys, got {type(key).__name__}"
-            )
+            raise pyaml.PyAMLException(f"Tango catalog expects string keys, got {type(key).__name__}")
 
         if "@" in key:
             attr_path, idx_str = key.rsplit("@", 1)
             try:
                 index = int(idx_str)
             except ValueError as exc:
-                raise pyaml.PyAMLException(
-                    f"Tango catalog '{self.get_name()}' invalid index '{idx_str}' in key '{key}'."
-                ) from exc
+                raise pyaml.PyAMLException(f"Tango catalog invalid index '{idx_str}' in key '{key}'.") from exc
         else:
             attr_path = key
             index = None
@@ -186,7 +181,7 @@ class TangoCatalog(Catalog):
         parts = attr_path.split("/")
         if len(parts) != 4 or any(part == "" for part in parts):
             raise pyaml.PyAMLException(
-                f"Tango catalog '{self.get_name()}' cannot resolve invalid Tango attribute "
+                f"Tango catalog cannot resolve invalid Tango attribute "
                 f"reference '{key}'. Expected 'domain/family/member/attribute' or "
                 f"'domain/family/member/attribute@index'."
             )
@@ -220,9 +215,7 @@ class TangoCatalog(Catalog):
             attr_config = tango.AttributeProxy(tango_attr_name).get_config()
         except tango.DevFailed as df:
             pyaml_exception = tango_to_PyAMLException(df)
-            raise pyaml.PyAMLException(
-                f"Tango catalog '{self.get_name()}' cannot resolve '{key}': {pyaml_exception}"
-            ) from df
+            raise pyaml.PyAMLException(f"Tango catalog cannot resolve '{key}': {pyaml_exception}") from df
 
         unit, attr_range, data_format, writable = self._read_config_metadata(
             attr_config, key
@@ -256,7 +249,7 @@ class TangoCatalog(Catalog):
         except tango.DevFailed as df:
             pyaml_exception = tango_to_PyAMLException(df)
             raise pyaml.PyAMLException(
-                f"Tango catalog '{self.get_name()}' cannot resolve '{key}': {pyaml_exception}"
+                f"Tango catalog cannot resolve '{key}': {pyaml_exception}"
             ) from df
 
         unit, attr_range, data_format, writable = self._read_config_metadata(
@@ -264,7 +257,7 @@ class TangoCatalog(Catalog):
         )
         if data_format != tango.AttrDataFormat.SPECTRUM:
             raise pyaml.PyAMLException(
-                f"Tango catalog '{self.get_name()}' cannot use '{key}' as an indexed "
+                f"Tango catalog cannot use '{key}' as an indexed "
                 "key: the Tango attribute is not a SPECTRUM."
             )
 
@@ -295,7 +288,7 @@ class TangoCatalog(Catalog):
             writable = attr_config.writable
         except AttributeError as exc:
             raise pyaml.PyAMLException(
-                f"Tango catalog '{self.get_name()}' cannot resolve '{key}': "
+                f"Tango catalog cannot resolve '{key}': "
                 f"incomplete Tango attribute config, missing '{exc.name}'."
             ) from exc
 
