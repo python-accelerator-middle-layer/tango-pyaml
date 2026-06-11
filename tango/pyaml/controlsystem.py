@@ -53,8 +53,6 @@ class ConfigModel(BaseModel):
     catalog: Catalog | None = None
     debug_level: str | None = None
     lazy_devices: bool = True
-    scalar_aggregator: str | None = "tango.pyaml.multi_attribute"
-    vector_aggregator: str | None = None
     timeout_ms: int = 3000
 
 
@@ -213,28 +211,6 @@ class TangoControlSystem(ControlSystem):
             Tango host URL, or ``None`` when unconfigured.
         """
         return self._cfg.tango_host
-
-    def scalar_aggregator(self) -> str | None:
-        """
-        Returns the module name used for handling aggregator of DeviceAccess
-
-        Returns
-        -------
-        str
-            Aggregator module name
-        """
-        return self._cfg.scalar_aggregator
-
-    def vector_aggregator(self) -> str | None:
-        """
-        Returns the module name used for handling aggregator of DeviceVectorAccess
-
-        Returns
-        -------
-        str
-            Aggregator module name
-        """
-        return self._cfg.vector_aggregator
 
     def get_aggregator(self) -> MultiAttribute | None:
         """Returns a new empty DeviceAccessList. If None is returned serialized readings/writtings are performed"""
