@@ -36,8 +36,8 @@ class ConfigModel(BaseModel):
         Tango host URL. Default is the TANGO_HOST variable.
     catalog : Catalog | None
         Catalog instance used to resolve PyAML device keys.
-    debug_level : int
-        Debug verbosity level.
+    debug_level : str | int | None
+        Debug verbosity level. Such as INFO, DEBUG, WARNING, ERROR, CRITICAL. Or 10, 20, 30, 40, 50.
     scalar_aggregator : str
         Aggregator module for scalar values. If none specified, writings and readings of sclar value are serialized.
     vector_aggregator : str
@@ -51,7 +51,7 @@ class ConfigModel(BaseModel):
     name: str
     tango_host: str | None = None
     catalog: Catalog | None = None
-    debug_level: str | None = None
+    debug_level: str | int | None = None
     lazy_devices: bool = True
     timeout_ms: int = 3000
 
@@ -72,7 +72,10 @@ class TangoControlSystem(ControlSystem):
         self.__devices = {}  # Dict containing all attached DeviceAccess
 
         if self._cfg.debug_level:
-            log_level = getattr(logging, self._cfg.debug_level, logging.WARNING)
+            if isinstance(self._cfg.debug_level, int):
+                log_level = self._cfg.debug_level
+            else:
+                log_level = getattr(logging, self._cfg.debug_level, logging.WARNING)
             logger.parent.setLevel(log_level)
             logger.setLevel(log_level)
 
