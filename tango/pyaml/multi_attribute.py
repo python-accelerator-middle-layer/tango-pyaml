@@ -42,7 +42,7 @@ class ConfigModel(BaseModel):
 class MultiAttribute(DeviceAccessList):
     def __init__(self, cfg: ConfigModel = None):
         super().__init__()
-        self._items:list[Attribute] = []
+        self._items: list[Attribute] = []
         self._cfg = cfg
         if self._cfg:
             for attribute in self._cfg.attributes:
@@ -89,7 +89,7 @@ class MultiAttribute(DeviceAccessList):
 
         # Wait part
         for index, call_id in enumerate(asynch_call_ids):
-            self[index]._attribute_dev.write_attribute_reply(call_id, timeout)
+            self._items[index]._attribute_dev.write_attribute_reply(call_id, timeout)
 
     def set_and_wait(self, value: npt.NDArray[np.float64]):
         raise NotImplementedError("Not implemented yet.")
@@ -108,8 +108,9 @@ class MultiAttribute(DeviceAccessList):
 
         # Wait to read the set_point, ie the write part in a tango attribute.
         for index, call_id in enumerate(asynch_call_ids):
-            dev_attr = self[index]._attribute_dev.read_attribute_reply(call_id, timeout)
-            if self[index].is_writable():
+            device = self._items[index]
+            dev_attr = device._attribute_dev.read_attribute_reply(call_id, timeout)
+            if device.is_writable():
                 values.append(dev_attr.w_value)
             else:
                 values.append(dev_attr.value)
@@ -130,7 +131,9 @@ class MultiAttribute(DeviceAccessList):
 
         # Wait to read the value
         for index, call_id in enumerate(asynch_call_ids):
-            dev_attr = self._items[index]._attribute_dev.read_attribute_reply(call_id, timeout)
+            dev_attr = self._items[index]._attribute_dev.read_attribute_reply(
+                call_id, timeout
+            )
             values.append(dev_attr.value)
 
         return np.array(values)
