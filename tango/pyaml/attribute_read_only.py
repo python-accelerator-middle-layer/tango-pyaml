@@ -1,11 +1,15 @@
 import logging
 
-from .attribute import Attribute, ConfigModel
+from .attribute import Attribute, ConfigModel as AttributeConfigModel
 from .tango_pyaml_utils import *
 
 PYAMLCLASS: str = "AttributeReadOnly"
 
 logger = logging.getLogger(__name__)
+
+
+class ConfigModel(AttributeConfigModel):
+    """Configuration model for a read-only Tango attribute."""
 
 
 class AttributeReadOnly(Attribute):

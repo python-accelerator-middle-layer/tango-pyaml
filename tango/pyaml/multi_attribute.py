@@ -42,6 +42,7 @@ class ConfigModel(BaseModel):
 class MultiAttribute(DeviceAccessList):
     def __init__(self, cfg: ConfigModel = None):
         super().__init__()
+        self._items: list[Attribute] = []
         self._cfg = cfg
         if self._cfg:
             for attribute in self._cfg.attributes:
@@ -49,7 +50,13 @@ class MultiAttribute(DeviceAccessList):
                     attribute=attribute, unit=self._cfg.unit, range=self._cfg.range
                 )
                 attr = Attribute(attr_config)
-                self.append(attr)
+                self._items.append(attr)
+
+    def len(self) -> int:
+        return len(self._items)
+
+    def get_device_at(self, index: int) -> DeviceAccess:
+        return self._items[index]
 
     def add_devices(self, devices: DeviceAccess | list[DeviceAccess]):
         if isinstance(devices, list):
@@ -57,29 +64,23 @@ class MultiAttribute(DeviceAccessList):
                 raise pyaml.PyAMLException(
                     "All devices must be instances of Attribute (tango.pyaml.attribute)."
                 )
-            super().extend(devices)
+            self._items.extend(devices)
         else:
             if not isinstance(devices, Attribute):
                 raise pyaml.PyAMLException(
                     "Device must be an instance of Attribute (tango.pyaml.attribute)."
                 )
-            super().append(devices)
-
-    def get_devices(self) -> DeviceAccess | list[DeviceAccess]:
-        if len(self) == 1:
-            return self[0]
-        else:
-            return self
+            self._items.append(devices)
 
     def set(self, value: npt.NDArray[np.float64]):
-        if len(value) != len(self):
+        if len(value) != len(self._items):
             raise pyaml.PyAMLException(
-                f"Size of value ({len(value)} do not match the number of managed devices ({len(self)})"
+                f"Size of value ({len(value)} do not match the number of managed devices ({len(self._items)})"
             )
         asynch_call_ids = []
         timeout = DeviceFactory().get_timeout_ms()
         # Set part
-        for index, device in enumerate(self):
+        for index, device in enumerate(self._items):
             device._ensure_initialized()
             asynch_call_id = device._attribute_dev.write_attribute_asynch(
                 device._attr_name, value[index]
@@ -88,7 +89,7 @@ class MultiAttribute(DeviceAccessList):
 
         # Wait part
         for index, call_id in enumerate(asynch_call_ids):
-            self[index]._attribute_dev.write_attribute_reply(call_id, timeout)
+            self._items[index]._attribute_dev.write_attribute_reply(call_id, timeout)
 
     def set_and_wait(self, value: npt.NDArray[np.float64]):
         raise NotImplementedError("Not implemented yet.")
@@ -98,7 +99,7 @@ class MultiAttribute(DeviceAccessList):
         asynch_call_ids = []
         timeout = DeviceFactory().get_timeout_ms()
         # Read asynch
-        for index, device in enumerate(self):
+        for index, device in enumerate(self._items):
             device._ensure_initialized()
             asynch_call_id = device._attribute_dev.read_attribute_asynch(
                 device._attr_name
@@ -107,8 +108,9 @@ class MultiAttribute(DeviceAccessList):
 
         # Wait to read the set_point, ie the write part in a tango attribute.
         for index, call_id in enumerate(asynch_call_ids):
-            dev_attr = self[index]._attribute_dev.read_attribute_reply(call_id, timeout)
-            if self[index].is_writable():
+            device = self._items[index]
+            dev_attr = device._attribute_dev.read_attribute_reply(call_id, timeout)
+            if device.is_writable():
                 values.append(dev_attr.w_value)
             else:
                 values.append(dev_attr.value)
@@ -120,7 +122,7 @@ class MultiAttribute(DeviceAccessList):
         asynch_call_ids = []
         timeout = DeviceFactory().get_timeout_ms()
         # Readback with asynch optim
-        for index, device in enumerate(self):
+        for index, device in enumerate(self._items):
             device._ensure_initialized()
             asynch_call_id = device._attribute_dev.read_attribute_asynch(
                 device._attr_name
@@ -129,20 +131,22 @@ class MultiAttribute(DeviceAccessList):
 
         # Wait to read the value
         for index, call_id in enumerate(asynch_call_ids):
-            dev_attr = self[index]._attribute_dev.read_attribute_reply(call_id, timeout)
+            dev_attr = self._items[index]._attribute_dev.read_attribute_reply(
+                call_id, timeout
+            )
             values.append(dev_attr.value)
 
         return np.array(values)
 
     def get_range(self) -> list[float]:
         attr_range: list[float] = []
-        for device in self:
+        for device in self._items:
             attr_range.extend(device.get_range())
         return attr_range
 
     def check_device_availability(self) -> bool:
         available = False
-        for device in self:
+        for device in self._items:
             available = device.check_device_availability()
             if not available:
                 break

@@ -1,10 +1,23 @@
 import logging
-import copy
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
+from pyaml import PyAMLException
 from pyaml.control.controlsystem import ControlSystem
 from pyaml.control.deviceaccess import DeviceAccess
 from . import __version__
+from .attribute import Attribute, ConfigModel as AttributeConfigModel
+from .attribute_list import AttributeList, ConfigModel as AttributeListConfigModel
+from .attribute_list_read_only import (
+    AttributeListReadOnly,
+    ConfigModel as AttributeListReadOnlyConfigModel,
+)
+from .attribute_read_only import (
+    AttributeReadOnly,
+    ConfigModel as AttributeReadOnlyConfigModel,
+)
+from .catalog import Catalog
+from .multi_attribute import MultiAttribute
 
 PYAMLCLASS: str = "TangoControlSystem"
 
@@ -21,6 +34,8 @@ class ConfigModel(BaseModel):
         Name of the control system.
     tango_host : str
         Tango host URL. Default is the TANGO_HOST variable.
+    catalog : Catalog | None
+        Catalog instance used to resolve PyAML device keys.
     debug_level : str | int | None
         Debug verbosity level. Such as INFO, DEBUG, WARNING, ERROR, CRITICAL. Or 10, 20, 30, 40, 50.
     scalar_aggregator : str
@@ -31,12 +46,13 @@ class ConfigModel(BaseModel):
         Device timeout in milli seconds.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+
     name: str
     tango_host: str | None = None
+    catalog: Catalog | None = None
     debug_level: str | int | None = None
     lazy_devices: bool = True
-    scalar_aggregator: str | None = "tango.pyaml.multi_attribute"
-    vector_aggregator: str | None = None
     timeout_ms: int = 3000
 
 
@@ -56,7 +72,10 @@ class TangoControlSystem(ControlSystem):
         self.__devices = {}  # Dict containing all attached DeviceAccess
 
         if self._cfg.debug_level:
-            log_level = getattr(logging, self._cfg.debug_level, logging.WARNING)
+            if isinstance(self._cfg.debug_level, int):
+                log_level = self._cfg.debug_level
+            else:
+                log_level = getattr(logging, self._cfg.debug_level, logging.WARNING)
             logger.parent.setLevel(log_level)
             logger.setLevel(log_level)
 
@@ -65,15 +84,6 @@ class TangoControlSystem(ControlSystem):
             f"PyAML Tango control system binding ({__version__}) initialized with name '{self._cfg.name}'"
             f" and TANGO_HOST={self._cfg.tango_host}",
         )
-
-    def __newref(self, obj, new_name: str):
-        # Shallow copy the object
-        newObj = copy.copy(obj)
-        # Shallow copy the config object
-        # to allow a new attribute name
-        newObj._cfg = copy.copy(obj._cfg)
-        newObj._cfg.attribute = new_name
-        return newObj
 
     def attach_array(self, devs: list[DeviceAccess]) -> list[DeviceAccess]:
         return self._attach(devs)
@@ -86,16 +96,102 @@ class TangoControlSystem(ControlSystem):
         newDevs = []
         for d in devs:
             if d is not None:
-                if self._cfg.tango_host:
-                    full_name = "//" + self._cfg.tango_host + "/" + d._cfg.attribute
+                try:
+                    attribute = d.get_tango_attribute()
+                except AttributeError as exc:
+                    raise PyAMLException(
+                        f"Cannot attach device {d!r}: expected a Tango attribute with get_tango_attribute()."
+                    ) from exc
+
+                tango_host = self.get_tango_host()
+                if tango_host:
+                    full_name = "//" + tango_host + "/" + attribute
                 else:
-                    full_name = d._cfg.attribute
+                    full_name = attribute
                 if full_name not in self.__devices:
-                    self.__devices[full_name] = self.__newref(d, full_name)
+                    self.__devices[full_name] = d.clone_with_tango_attribute(full_name)
                 newDevs.append(self.__devices[full_name])
             else:
                 newDevs.append(None)
         return newDevs
+
+    def get_device(self, ref: str | BaseModel | None) -> DeviceAccess | None:
+        """
+        Resolve a public device reference for this Tango control system.
+
+        YAML references are opaque strings resolved by the configured backend
+        catalog. Public Python APIs may pass Tango backend configuration models.
+        Already constructed DeviceAccess instances are intentionally rejected:
+        attach() remains the internal compatibility API for those.
+        """
+        if ref is None:
+            return None
+
+        if isinstance(ref, DeviceAccess):
+            raise PyAMLException(
+                "TangoControlSystem.get_device() expects a catalog key, Tango "
+                "ConfigModel, or None. Use attach() for already constructed "
+                "DeviceAccess objects."
+            )
+
+        if isinstance(ref, str):
+            catalog = self.get_catalog()
+            if catalog is None:
+                raise PyAMLException(
+                    f"TangoControlSystem '{self.name()}' has no catalog configured."
+                )
+            if not isinstance(catalog, Catalog):
+                raise PyAMLException(
+                    f"TangoControlSystem '{self.name()}' has unsupported catalog type "
+                    f"{type(catalog).__name__}."
+                )
+            try:
+                resolve = catalog.resolve
+            except AttributeError as exc:
+                raise PyAMLException(
+                    f"Catalog '{catalog.get_name()}' cannot resolve key '{ref}': "
+                    "missing backend resolve() method."
+                ) from exc
+            device = resolve(ref, self)
+            return self._attach([device])[0]
+
+        if isinstance(ref, AttributeReadOnlyConfigModel):
+            return self._attach([AttributeReadOnly(ref)])[0]
+
+        if isinstance(ref, AttributeConfigModel):
+            return self._attach([Attribute(ref)])[0]
+
+        if isinstance(ref, AttributeListReadOnlyConfigModel):
+            return AttributeListReadOnly(self._attach_attribute_list_config(ref))
+
+        if isinstance(ref, AttributeListConfigModel):
+            return AttributeList(self._attach_attribute_list_config(ref))
+
+        if isinstance(ref, BaseModel):
+            raise PyAMLException(
+                f"TangoControlSystem cannot construct a device from config model "
+                f"{type(ref).__name__}."
+            )
+
+        raise PyAMLException(
+            f"TangoControlSystem.get_device() cannot resolve references of type "
+            f"{type(ref).__name__}; expected str, Tango ConfigModel, or None."
+        )
+
+    def _attach_attribute_list_config(
+        self, cfg: AttributeListConfigModel
+    ) -> AttributeListConfigModel:
+        tango_host = self.get_tango_host()
+        if not tango_host:
+            return cfg
+
+        return cfg.model_copy(
+            update={
+                "attributes": [
+                    f"//{tango_host}/{attribute}" for attribute in cfg.attributes
+                ]
+            }
+        )
 
     def name(self) -> str:
         """
@@ -108,6 +204,21 @@ class TangoControlSystem(ControlSystem):
         """
         return self._cfg.name
 
+    def get_tango_host(self) -> str | None:
+        """
+        Return the Tango host configured for this control system.
+
+        Returns
+        -------
+        str | None
+            Tango host URL, or ``None`` when unconfigured.
+        """
+        return self._cfg.tango_host
+
+    def get_aggregator(self) -> MultiAttribute | None:
+        """Returns a new empty DeviceAccessList. If None is returned serialized readings/writtings are performed"""
+        return MultiAttribute()
+
     def scalar_aggregator(self) -> str | None:
         """
         Returns the module name used for handling aggregator of DeviceAccess
@@ -117,7 +228,7 @@ class TangoControlSystem(ControlSystem):
         str
             Aggregator module name
         """
-        return self._cfg.scalar_aggregator
+        return None
 
     def vector_aggregator(self) -> str | None:
         """
@@ -128,7 +239,18 @@ class TangoControlSystem(ControlSystem):
         str
             Aggregator module name
         """
-        return self._cfg.vector_aggregator
+        return None
+
+    def get_catalog(self) -> Catalog | None:
+        """
+        Returns the catalog that references all control systems devices.
+
+        Returns
+        -------
+        Catalog
+            The catalog
+        """
+        return self._cfg.catalog
 
     def __repr__(self):
         return repr(self._cfg).replace("ConfigModel", self.__class__.__name__)

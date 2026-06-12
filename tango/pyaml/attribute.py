@@ -1,3 +1,4 @@
+import copy
 import logging
 from typing import Optional, Tuple
 
@@ -27,11 +28,16 @@ class ConfigModel(BaseModel):
         The unit of the attribute.
     range : tuple(min, max), optional
         Range of valid values. Use null for -∞ or +∞.
+    index : int, optional
+        Zero-based index into a SPECTRUM attribute. When set, the instance
+        behaves as a read-only scalar view of one vector element; writes are
+        always rejected and a SPECTRUM data_format is enforced on init.
     """
 
     attribute: str
     unit: str = ""
     range: Optional[Tuple[Optional[float], Optional[float]]] = None
+    index: Optional[int] = None
 
 
 class Attribute(DeviceAccess, InitializableElement):
@@ -52,7 +58,9 @@ class Attribute(DeviceAccess, InitializableElement):
     def __init__(self, cfg: ConfigModel, writable=True):
         super().__init__()
         self._cfg = cfg
-        self._writable = writable
+        self._index = cfg.index
+        # Indexed access never writes individual array elements.
+        self._writable = writable and self._index is None
         self._attribute_dev: tango.DeviceProxy = None
         self._attr_config: tango.AttributeConfig = None
         self._attribute_dev_name: str = None
@@ -71,6 +79,13 @@ class Attribute(DeviceAccess, InitializableElement):
         self._attr_config: tango.AttributeConfig = (
             self._attribute_dev.get_attribute_config(self._attr_name, wait=True)
         )
+
+        if self._index is not None:
+            if self._attr_config.data_format != tango.AttrDataFormat.SPECTRUM:
+                raise pyaml.PyAMLException(
+                    f"Tango attribute '{self._cfg.attribute}' is not a SPECTRUM; "
+                    "indexed access requires a vector attribute."
+                )
 
         if self._writable:
             if self._attr_config.writable not in [
@@ -97,8 +112,13 @@ class Attribute(DeviceAccess, InitializableElement):
         Raises
         ------
         pyaml.PyAMLException
-            If the Tango write fails.
+            If the Tango write fails or this is an indexed attribute.
         """
+        if self._index is not None:
+            raise pyaml.PyAMLException(
+                f"Indexed attribute '{self._cfg.attribute}[{self._index}]' "
+                "does not support individual element writes."
+            )
         self._ensure_initialized()
         logger.log(
             logging.DEBUG, f"Setting asynchronously {self._cfg.attribute} to {value}"
@@ -120,8 +140,13 @@ class Attribute(DeviceAccess, InitializableElement):
         Raises
         ------
         pyaml.PyAMLException
-            If the Tango write fails.
+            If the Tango write fails or this is an indexed attribute.
         """
+        if self._index is not None:
+            raise pyaml.PyAMLException(
+                f"Indexed attribute '{self._cfg.attribute}[{self._index}]' "
+                "does not support individual element writes."
+            )
         self._ensure_initialized()
         logger.log(logging.DEBUG, f"Setting {self._cfg.attribute} to {value}")
         try:
@@ -150,7 +175,8 @@ class Attribute(DeviceAccess, InitializableElement):
             quality = Quality[
                 attr_value.quality.name.rsplit("_", 1)[1]
             ]  # AttrQuality.ATTR_VALID gives Quality.VALID
-            value = Value(attr_value.value, quality, attr_value.time.todatetime())
+            raw = attr_value.value[self._index] if self._index is not None else attr_value.value
+            value = Value(raw, quality, attr_value.time.todatetime())
         except tango.DevFailed as df:
             raise tango_to_PyAMLException(df)
         return value
@@ -173,9 +199,37 @@ class Attribute(DeviceAccess, InitializableElement):
         Returns
         -------
         str
-            The attribute path (e.g., 'my/ps/device/current').
+            The attribute path (e.g., 'my/ps/device/current'), or with index
+            notation when indexed (e.g., 'my/ps/device/current[2]').
+        """
+        if self._index is not None:
+            return f"{self._cfg.attribute}[{self._index}]"
+        return self._cfg.attribute
+
+    def get_tango_attribute(self) -> str:
+        """
+        Return the raw Tango attribute path without index decoration.
+
+        Returns
+        -------
+        str
+            Tango attribute path stored in the configuration.
         """
         return self._cfg.attribute
+
+    def clone_with_tango_attribute(self, attribute: str) -> "Attribute":
+        """
+        Return a shallow copy configured with another Tango attribute path.
+
+        Parameters
+        ----------
+        attribute : str
+            Tango attribute path to store in the cloned instance.
+        """
+        new_obj = copy.copy(self)
+        new_obj._cfg = copy.copy(self._cfg)
+        new_obj._cfg.attribute = attribute
+        return new_obj
 
     def measure_name(self) -> str:
         """
@@ -184,13 +238,20 @@ class Attribute(DeviceAccess, InitializableElement):
         Returns
         -------
         str
-            The attribute name (e.g., 'current').
+            The attribute name (e.g., 'current'), with index notation when
+            indexed (e.g., 'current[2]').
         """
-        return self._cfg.attribute.rsplit("/", 1)[1]
+        short = self._cfg.attribute.rsplit("/", 1)[1]
+        if self._index is not None:
+            return f"{short}[{self._index}]"
+        return short
 
     def get(self) -> float:
         """
         Get the last written value of the attribute.
+
+        For indexed attributes, returns the setpoint element at the configured
+        index (``w_value[index]``).
 
         Returns
         -------
@@ -204,7 +265,10 @@ class Attribute(DeviceAccess, InitializableElement):
         """
         self._ensure_initialized()
         try:
-            return self._attribute_dev.read_attribute(self._attr_name).w_value
+            attr_val = self._attribute_dev.read_attribute(self._attr_name)
+            if self._index is not None:
+                return attr_val.w_value[self._index]
+            return attr_val.w_value
         except tango.DevFailed as df:
             raise tango_to_PyAMLException(df)
 
