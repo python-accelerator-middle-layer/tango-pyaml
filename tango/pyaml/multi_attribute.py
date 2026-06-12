@@ -64,13 +64,13 @@ class MultiAttribute(DeviceAccessList):
                 raise pyaml.PyAMLException(
                     "All devices must be instances of Attribute (tango.pyaml.attribute)."
                 )
-            super().extend(devices)
+            self._items.extend(devices)
         else:
             if not isinstance(devices, Attribute):
                 raise pyaml.PyAMLException(
                     "Device must be an instance of Attribute (tango.pyaml.attribute)."
                 )
-            super().append(devices)
+            self._items.append(devices)
 
     def set(self, value: npt.NDArray[np.float64]):
         if len(value) != len(self._items):
