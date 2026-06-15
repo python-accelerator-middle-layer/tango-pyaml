@@ -73,7 +73,7 @@ def test_catalog_can_be_configured_and_resolved():
         )
     )
 
-    resolved = cs.get_device("BPM_C01-01/x")
+    resolved = cs.get_device_access("BPM_C01-01/x")
 
     assert cs.get_catalog() is catalog
     assert catalog.resolve("BPM_C01-01/x") is device
@@ -85,7 +85,7 @@ def test_get_device_builds_attribute_from_config_model():
         ConfigModel(name="test_tango_cs", tango_host="tangodb:10000")
     )
 
-    resolved = cs.get_device(
+    resolved = cs.get_device_access(
         AttributeConfigModel(attribute="sys/tg_test/1/float_scalar", unit="A")
     )
 
@@ -99,7 +99,7 @@ def test_get_device_builds_read_only_attribute_from_config_model():
         ConfigModel(name="test_tango_cs", tango_host="tangodb:10000")
     )
 
-    resolved = cs.get_device(
+    resolved = cs.get_device_access(
         AttributeReadOnlyConfigModel(attribute="sys/tg_test/1/float_scalar", unit="A")
     )
 
@@ -113,7 +113,7 @@ def test_get_device_builds_attribute_list_from_config_model():
         ConfigModel(name="test_tango_cs", tango_host="tangodb:10000")
     )
 
-    resolved = cs.get_device(
+    resolved = cs.get_device_access(
         AttributeListConfigModel(
             name="group",
             attributes=[
@@ -139,7 +139,7 @@ def test_get_device_builds_read_only_attribute_list_from_config_model():
         ConfigModel(name="test_tango_cs", tango_host="tangodb:10000")
     )
 
-    resolved = cs.get_device(
+    resolved = cs.get_device_access(
         AttributeListReadOnlyConfigModel(
             name="group",
             attributes=[
@@ -162,21 +162,21 @@ def test_get_device_builds_read_only_attribute_list_from_config_model():
 def test_get_device_none_returns_none():
     cs = TangoControlSystem(ConfigModel(name="test_tango_cs"))
 
-    assert cs.get_device(None) is None
+    assert cs.get_device_access(None) is None
 
 
 def test_get_device_rejects_preconstructed_device_access(config):
     cs = TangoControlSystem(ConfigModel(name="test_tango_cs"))
 
     with pytest.raises(pyaml.PyAMLException, match="Use attach\\(\\)"):
-        cs.get_device(Attribute(config))
+        cs.get_device_access(Attribute(config))
 
 
 def test_get_device_requires_catalog_for_string_key():
     cs = TangoControlSystem(ConfigModel(name="test_tango_cs"))
 
     with pytest.raises(pyaml.PyAMLException, match="has no catalog configured"):
-        cs.get_device("BPM_C01-01/x")
+        cs.get_device_access("BPM_C01-01/x")
 
 
 def test_get_device_reports_unknown_catalog_key():
@@ -193,14 +193,14 @@ def test_get_device_reports_unknown_catalog_key():
     cs = TangoControlSystem(ConfigModel(name="test_tango_cs", catalog=catalog))
 
     with pytest.raises(pyaml.PyAMLException, match="cannot resolve key 'BPM_C01-02/x'"):
-        cs.get_device("BPM_C01-02/x")
+        cs.get_device_access("BPM_C01-02/x")
 
 
 def test_get_device_rejects_unknown_reference_type():
     cs = TangoControlSystem(ConfigModel(name="test_tango_cs"))
 
     with pytest.raises(pyaml.PyAMLException, match="type int"):
-        cs.get_device(42)
+        cs.get_device_access(42)
 
 
 def test_tango_control_system_exposes_tango_host():

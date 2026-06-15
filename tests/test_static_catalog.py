@@ -99,9 +99,9 @@ def test_static_catalog_is_shared_across_control_systems():
     assert live.get_catalog() is catalog
     assert ops.get_catalog() is catalog
     assert catalog.resolve("BPM/x") is device
-    assert live.get_device("BPM/x") is not device
-    assert ops.get_device("BPM/x") is not device
-    assert live.get_device("BPM/x") is not ops.get_device("BPM/x")
+    assert live.get_device_access("BPM/x") is not device
+    assert ops.get_device_access("BPM/x") is not device
+    assert live.get_device_access("BPM/x") is not ops.get_device_access("BPM/x")
 
 
 # --- Integration with DeviceAccess types ---
@@ -124,7 +124,7 @@ def test_static_catalog_can_be_used_through_tango_control_system():
     catalog = make_catalog(entries=[make_entry("BPM/x", device=device)])
     control_system = TangoControlSystem(TangoControlSystemConfigModel(name="live", catalog=catalog))
 
-    resolved = control_system.get_device("BPM/x")
+    resolved = control_system.get_device_access("BPM/x")
 
     assert resolved is not device
     assert resolved.name() == "sr/bpm/c01-01/x"

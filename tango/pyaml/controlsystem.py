@@ -174,7 +174,7 @@ class TangoControlSystem(ControlSystem):
             )
 
         raise PyAMLException(
-            f"TangoControlSystem.get_device() cannot resolve references of type "
+            f"TangoControlSystem.get_device_access() cannot resolve references of type "
             f"{type(ref).__name__}; expected str, Tango ConfigModel, or None."
         )
 
