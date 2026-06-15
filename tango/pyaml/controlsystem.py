@@ -115,7 +115,7 @@ class TangoControlSystem(ControlSystem):
                 newDevs.append(None)
         return newDevs
 
-    def get_device(self, ref: str | BaseModel | None) -> DeviceAccess | None:
+    def get_device_access(self, ref: str | BaseModel | None) -> DeviceAccess | None:
         """
         Resolve a public device reference for this Tango control system.
 
@@ -129,7 +129,7 @@ class TangoControlSystem(ControlSystem):
 
         if isinstance(ref, DeviceAccess):
             raise PyAMLException(
-                "TangoControlSystem.get_device() expects a catalog key, Tango "
+                "TangoControlSystem.get_device_access() expects a catalog key, Tango "
                 "ConfigModel, or None. Use attach() for already constructed "
                 "DeviceAccess objects."
             )
