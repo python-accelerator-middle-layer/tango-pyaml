@@ -136,8 +136,8 @@ def test_tango_catalog_connected_metadata_uses_control_system_tango_host():
         return MockedAttributeProxy(attr_full_name, attr_configs[attr_full_name])
 
     with patch("tango.AttributeProxy", side_effect=attribute_proxy) as attr_proxy:
-        live_device = live.get_device(key)
-        ops_device = ops.get_device(key)
+        live_device = live.get_device_access(key)
+        ops_device = ops.get_device_access(key)
 
     assert attr_proxy.call_args_list == [
         call("//live-db:10000/domain/family/member/current"),
@@ -153,7 +153,7 @@ def test_tango_catalog_can_be_used_through_tango_control_system():
     catalog = TangoCatalog(ConfigModel(disconnected=True))
     control_system = TangoControlSystem(TangoControlSystemConfigModel(name="live", catalog=catalog))
 
-    device = control_system.get_device("domain/family/member/attribute")
+    device = control_system.get_device_access("domain/family/member/attribute")
 
     assert isinstance(device, Attribute)
     assert control_system.get_catalog() is catalog
