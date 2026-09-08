@@ -5,6 +5,8 @@ import numpy as np
 import pyaml
 from numpy import typing as npt
 from pyaml.control.deviceaccess import DeviceAccess
+from pyaml.common.element import __pyaml_repr__
+from pyaml.validation import register_schema, DynamicValidation
 from pydantic import BaseModel
 
 from pyaml.control.deviceaccesslist import DeviceAccessList
@@ -17,7 +19,7 @@ PYAMLCLASS: str = "MultiAttribute"
 logger = logging.getLogger(__name__)
 
 
-class ConfigModel(BaseModel):
+class MultiAttributeConfig(BaseModel):
     """
     Configuration model for a list of Tango attributes.
 
@@ -39,18 +41,29 @@ class ConfigModel(BaseModel):
     range: Optional[Tuple[Optional[float], Optional[float]]] = None
 
 
-class MultiAttribute(DeviceAccessList):
-    def __init__(self, cfg: ConfigModel = None):
+@register_schema
+class MultiAttribute(DeviceAccessList, DynamicValidation):
+    def __init__(
+        self,
+        attributes: list[str] = [],
+        name: str = "",
+        unit: str = "",
+        range: Optional[Tuple[Optional[float], Optional[float]]] = None,
+    ):
         super().__init__()
+
+        self._attributes = attributes
+        self._name = name
+        self._unit = unit
+        self._range = range
         self._items: list[Attribute] = []
-        self._cfg = cfg
-        if self._cfg:
-            for attribute in self._cfg.attributes:
-                attr_config = AttributeConfig(
-                    attribute=attribute, unit=self._cfg.unit, range=self._cfg.range
-                )
-                attr = Attribute(**attr_config.model_dump())
-                self._items.append(attr)
+
+        for attribute in self._attributes:
+            attr_config = AttributeConfig(
+                attribute=attribute, unit=self._unit, range=self._range
+            )
+            attr = Attribute(**attr_config.model_dump())
+            self._items.append(attr)
 
     def len(self) -> int:
         return len(self._items)
@@ -153,10 +166,7 @@ class MultiAttribute(DeviceAccessList):
         return available
 
     def unit(self) -> str:
-        if self._cfg:
-            return self._cfg.unit
-        else:
-            return ""
+        return self._unit
 
     def __repr__(self):
-        return repr(self._cfg).replace("ConfigModel", self.__class__.__name__)
+        return __pyaml_repr__(self)
