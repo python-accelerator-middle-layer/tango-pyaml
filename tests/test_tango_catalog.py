@@ -2,14 +2,15 @@ from unittest.mock import call, patch
 
 import pyaml
 import pytest
-import tango
 from pyaml.control.controlsystem import ControlSystemAdapter
 
-from .mocked_device_proxy import MockedAttributeInfoEx, MockedAttributeProxy
+import tango
 from tango.pyaml.attribute import Attribute
 from tango.pyaml.attribute_read_only import AttributeReadOnly
 from tango.pyaml.controlsystem import TangoControlSystem
 from tango.pyaml.tango_catalog import TangoCatalog
+
+from .mocked_device_proxy import MockedAttributeInfoEx, MockedAttributeProxy
 
 
 def build_control_system(catalog: TangoCatalog, name="live"):
@@ -273,12 +274,16 @@ def test_tango_catalog_connected_rejects_indexed_scalar_attribute():
     catalog = TangoCatalog()
     control_system = build_control_system(catalog)
 
-    with patch(
-        "tango.AttributeProxy",
-        return_value=MockedAttributeProxy("domain/family/member/current", attr_config),
+    with (
+        patch(
+            "tango.AttributeProxy",
+            return_value=MockedAttributeProxy(
+                "domain/family/member/current", attr_config
+            ),
+        ),
+        pytest.raises(pyaml.PyAMLException, match="not a SPECTRUM"),
     ):
-        with pytest.raises(pyaml.PyAMLException, match="not a SPECTRUM"):
-            catalog.resolve("domain/family/member/current@0", control_system)
+        catalog.resolve("domain/family/member/current@0", control_system)
 
 
 def test_tango_catalog_indexed_caches_resolved_devices():
@@ -304,12 +309,14 @@ def test_tango_catalog_wraps_tango_errors():
     catalog = TangoCatalog()
     control_system = build_control_system(catalog)
 
-    with patch("tango.AttributeProxy", side_effect=tango.DevFailed()):
-        with pytest.raises(
+    with (
+        patch("tango.AttributeProxy", side_effect=tango.DevFailed()),
+        pytest.raises(
             pyaml.PyAMLException,
             match="Tango catalog cannot resolve 'domain/family/member/attribute'",
-        ):
-            catalog.resolve("domain/family/member/attribute", control_system)
+        ),
+    ):
+        catalog.resolve("domain/family/member/attribute", control_system)
 
 
 def test_tango_catalog_rejects_incomplete_tango_config():
@@ -322,14 +329,16 @@ def test_tango_catalog_rejects_incomplete_tango_config():
     catalog = TangoCatalog()
     control_system = build_control_system(catalog)
 
-    with patch(
-        "tango.AttributeProxy",
-        return_value=MockedAttributeProxy(
-            "domain/family/member/attribute", IncompleteAttributeConfig()
+    with (
+        patch(
+            "tango.AttributeProxy",
+            return_value=MockedAttributeProxy(
+                "domain/family/member/attribute", IncompleteAttributeConfig()
+            ),
         ),
-    ):
-        with pytest.raises(
+        pytest.raises(
             pyaml.PyAMLException,
             match="incomplete Tango attribute config, missing 'writable'",
-        ):
-            catalog.resolve("domain/family/member/attribute", control_system)
+        ),
+    ):
+        catalog.resolve("domain/family/member/attribute", control_system)

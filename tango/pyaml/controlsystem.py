@@ -3,10 +3,11 @@ import logging
 from pydantic import BaseModel
 
 from pyaml import PyAMLException
+from pyaml.common.element import __pyaml_repr__
 from pyaml.control.controlsystem import ControlSystem
 from pyaml.control.deviceaccess import DeviceAccess
-from pyaml.common.element import __pyaml_repr__
-from pyaml.validation import register_schema, DynamicValidation
+from pyaml.validation import DynamicValidation, register_schema
+
 from . import __version__
 from .attribute import Attribute, AttributeConfig
 from .attribute_list import AttributeList, AttributeListConfig

@@ -1,15 +1,14 @@
 import logging
-from typing import Tuple, Optional
 
 import numpy as np
-import pyaml
 from numpy import typing as npt
-from pyaml.control.deviceaccess import DeviceAccess
-from pyaml.common.element import __pyaml_repr__
-from pyaml.validation import register_schema, DynamicValidation
 from pydantic import BaseModel
 
+import pyaml
+from pyaml.common.element import __pyaml_repr__
+from pyaml.control.deviceaccess import DeviceAccess
 from pyaml.control.deviceaccesslist import DeviceAccessList
+from pyaml.validation import DynamicValidation, register_schema
 
 from .attribute import Attribute, AttributeConfig
 from .device_factory import DeviceFactory
@@ -38,17 +37,17 @@ class MultiAttributeConfig(BaseModel):
     attributes: list[str] = []
     name: str = ""
     unit: str = ""
-    range: Optional[Tuple[Optional[float], Optional[float]]] = None
+    range: tuple[float | None, float | None] | None = None
 
 
 @register_schema
 class MultiAttribute(DeviceAccessList, DynamicValidation):
     def __init__(
         self,
-        attributes: list[str] = [],
+        attributes: list[str] | None = None,
         name: str = "",
         unit: str = "",
-        range: Optional[Tuple[Optional[float], Optional[float]]] = None,
+        range: tuple[float | None, float | None] | None = None,
     ):
         super().__init__()
 
@@ -73,7 +72,7 @@ class MultiAttribute(DeviceAccessList, DynamicValidation):
 
     def add_devices(self, devices: DeviceAccess | list[DeviceAccess]):
         if isinstance(devices, list):
-            if any([not isinstance(device, Attribute) for device in devices]):
+            if any(not isinstance(device, Attribute) for device in devices):
                 raise pyaml.PyAMLException(
                     "All devices must be instances of Attribute (tango.pyaml.attribute)."
                 )

@@ -1,12 +1,13 @@
+from unittest.mock import patch
+
+from tango.pyaml.attribute import Attribute
+
+from .mocked_control_system_initialized import MockedControlSystemInitialized
 from .mocked_device_proxy import (
     MockedAttributeInfoEx,
     MockedDeviceProxy,
     tango,
 )
-
-from unittest.mock import patch
-from tango.pyaml.attribute import Attribute
-from .mocked_control_system_initialized import MockedControlSystemInitialized
 
 
 class MockedMinMaxAttrDeviceProxy(MockedDeviceProxy):

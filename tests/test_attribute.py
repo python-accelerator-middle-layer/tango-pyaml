@@ -1,6 +1,10 @@
+from unittest.mock import patch
+
 import pyaml.control.readback_value
 import pytest
 
+from tango.pyaml.attribute import Attribute
+from tango.pyaml.attribute_list import AttributeList
 from tango.pyaml.attribute_read_only import AttributeReadOnly
 
 from .mocked_control_system_initialized import MockedControlSystemInitialized
@@ -10,9 +14,6 @@ from .mocked_device_proxy import (
     tango,
 )
 from .mocked_group import MockedGroup
-from unittest.mock import patch
-from tango.pyaml.attribute import Attribute
-from tango.pyaml.attribute_list import AttributeList
 
 
 class MockedReadExceptDeviceProxy(MockedDeviceProxy):

@@ -1,11 +1,11 @@
 import pytest
 import yaml
 
-from tango.pyaml.attribute_list import AttributeListConfig as GrpCM
 from tango.pyaml.attribute import AttributeConfig as AttrCM
-from tango.pyaml.multi_attribute import MultiAttributeConfig as MultiAttrCM
+from tango.pyaml.attribute_list import AttributeListConfig as GrpCM
 from tango.pyaml.controlsystem import TangoControlSystem
 from tango.pyaml.device_factory import DeviceFactory
+from tango.pyaml.multi_attribute import MultiAttributeConfig as MultiAttrCM
 
 
 @pytest.fixture(autouse=True)

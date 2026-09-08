@@ -1,19 +1,18 @@
 import copy
 import logging
-import tango
-import pyaml
-from typing import Optional, Tuple
 
 from pydantic import BaseModel
 
+import pyaml
+import tango
 from pyaml.common.element import __pyaml_repr__
 from pyaml.control.deviceaccess import DeviceAccess
-from pyaml.control.readback_value import Value, Quality
-from pyaml.validation import register_schema, DynamicValidation
+from pyaml.control.readback_value import Quality, Value
+from pyaml.validation import DynamicValidation, register_schema
 
-from .initializable_element import InitializableElement
 from .device_factory import DeviceFactory
-from .tango_pyaml_utils import to_float_or_none, tango_to_PyAMLException
+from .initializable_element import InitializableElement
+from .tango_pyaml_utils import tango_to_PyAMLException, to_float_or_none
 
 PYAMLCLASS: str = "Attribute"
 
@@ -40,8 +39,8 @@ class AttributeConfig(BaseModel):
 
     attribute: str
     unit: str = ""
-    range: Optional[Tuple[Optional[float], Optional[float]]] = None
-    index: Optional[int] = None
+    range: tuple[float | None, float | None] | None = None
+    index: int | None = None
 
 
 @register_schema
@@ -74,8 +73,8 @@ class Attribute(DeviceAccess, InitializableElement, DynamicValidation):
         self,
         attribute: str,
         unit: str = "",
-        range: Optional[Tuple[Optional[float], Optional[float]]] = None,
-        index: Optional[int] = None,
+        range: tuple[float | None, float | None] | None = None,
+        index: int | None = None,
         writable=True,
     ):
         super().__init__()
@@ -104,22 +103,23 @@ class Attribute(DeviceAccess, InitializableElement, DynamicValidation):
             self._attribute_dev.get_attribute_config(self._attr_name, wait=True)
         )
 
-        if self._index is not None:
-            if self._attr_config.data_format != tango.AttrDataFormat.SPECTRUM:
-                raise pyaml.PyAMLException(
-                    f"Tango attribute '{self._attribute}' is not a SPECTRUM; "
-                    "indexed access requires a vector attribute."
-                )
+        if (
+            self._index is not None
+            and self._attr_config.data_format != tango.AttrDataFormat.SPECTRUM
+        ):
+            raise pyaml.PyAMLException(
+                f"Tango attribute '{self._attribute}' is not a SPECTRUM; "
+                "indexed access requires a vector attribute."
+            )
 
-        if self._writable:
-            if self._attr_config.writable not in [
-                tango.AttrWriteType.READ_WRITE,
-                tango.AttrWriteType.WRITE,
-                tango.AttrWriteType.READ_WITH_WRITE,
-            ]:
-                raise pyaml.PyAMLException(
-                    f"Tango attribute {self._attribute} is not writable."
-                )
+        if self._writable and self._attr_config.writable not in [
+            tango.AttrWriteType.READ_WRITE,
+            tango.AttrWriteType.WRITE,
+            tango.AttrWriteType.READ_WITH_WRITE,
+        ]:
+            raise pyaml.PyAMLException(
+                f"Tango attribute {self._attribute} is not writable."
+            )
 
     def is_writable(self):
         return self._writable
@@ -318,7 +318,7 @@ class Attribute(DeviceAccess, InitializableElement, DynamicValidation):
         try:
             self._ensure_initialized()
             self._attribute_dev.ping()
-        except tango.DevFailed | pyaml.PyAMLException:
+        except (tango.DevFailed, pyaml.PyAMLException):
             available = False
         return available
 

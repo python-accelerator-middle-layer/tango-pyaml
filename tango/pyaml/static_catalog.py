@@ -1,6 +1,6 @@
 from pyaml import PyAMLException
 from pyaml.control.deviceaccess import DeviceAccess
-from pyaml.validation import register_schema, DynamicValidation
+from pyaml.validation import DynamicValidation, register_schema
 
 from .catalog import Catalog
 from .static_catalog_entry import StaticCatalogEntry

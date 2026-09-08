@@ -1,5 +1,6 @@
-from threading import Lock
 from collections import defaultdict
+from threading import Lock
+
 import tango
 
 

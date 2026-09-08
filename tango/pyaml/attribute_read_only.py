@@ -1,7 +1,7 @@
 import logging
-from typing import Optional, Tuple
+
 import pyaml
-from pyaml.validation import register_schema, DynamicValidation
+from pyaml.validation import DynamicValidation, register_schema
 
 from .attribute import Attribute, AttributeConfig
 
@@ -37,8 +37,8 @@ class AttributeReadOnly(Attribute, DynamicValidation):
         self,
         attribute: str,
         unit: str = "",
-        range: Optional[Tuple[Optional[float], Optional[float]]] = None,
-        index: Optional[int] = None,
+        range: tuple[float | None, float | None] | None = None,
+        index: int | None = None,
     ):
         super().__init__(
             attribute=attribute, unit=unit, range=range, index=index, writable=False

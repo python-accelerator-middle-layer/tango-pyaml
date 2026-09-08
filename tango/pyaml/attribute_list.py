@@ -1,13 +1,14 @@
 import logging
 
-import pyaml
 from numpy import array
 from pydantic import BaseModel
-from pyaml.control.deviceaccess import DeviceAccess
-from pyaml.control.readback_value import Value, Quality
-from pyaml.common.element import __pyaml_repr__
-from pyaml.validation import register_schema, DynamicValidation
+
+import pyaml
 import tango
+from pyaml.common.element import __pyaml_repr__
+from pyaml.control.deviceaccess import DeviceAccess
+from pyaml.control.readback_value import Quality, Value
+from pyaml.validation import DynamicValidation, register_schema
 
 from .initializable_element import InitializableElement
 from .tango_pyaml_utils import to_float_or_none
@@ -63,7 +64,7 @@ class AttributeList(DeviceAccess, InitializableElement, DynamicValidation):
 
         for attribute in self._attributes:
             attribute_dev_name, attr_name = attribute.rsplit("/", 1)
-            if attr_name not in self._attr_dev.keys():
+            if attr_name not in self._attr_dev:
                 self._attr_dev[attr_name] = []
             if attribute_dev_name not in self._attr_dev[attr_name]:
                 self._attr_dev[attr_name].append(attribute_dev_name)
@@ -233,7 +234,7 @@ class AttributeList(DeviceAccess, InitializableElement, DynamicValidation):
         try:
             self._ensure_initialized()
             [group.ping() for group in self._tango_groups.values()]
-        except tango.DevFailed | pyaml.PyAMLException:
+        except (tango.DevFailed, pyaml.PyAMLException):
             available = False
         return available
 

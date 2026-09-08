@@ -1,8 +1,9 @@
 import logging
 
 import pyaml
+from pyaml.validation import DynamicValidation, register_schema
+
 from .attribute_list import AttributeList, AttributeListConfig
-from pyaml.validation import register_schema, DynamicValidation
 
 PYAMLCLASS: str = "AttributeListReadOnly"
 

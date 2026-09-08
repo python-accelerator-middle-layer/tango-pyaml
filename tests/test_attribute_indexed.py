@@ -1,18 +1,18 @@
-import numpy as np
-import pytest
-import tango
 from unittest.mock import patch
 
+import numpy as np
 import pyaml
+import pytest
 
+import tango
 from tango.pyaml.attribute import Attribute, AttributeConfig
 from tango.pyaml.attribute_read_only import AttributeReadOnly
+
 from .mocked_device_proxy import (
     MockedAttributeInfoEx,
-    MockedDeviceProxy,
     MockedDeviceAttribute,
+    MockedDeviceProxy,
 )
-
 
 SPECTRUM_ARRAY = np.array([10.0, 20.0, 30.0])
 

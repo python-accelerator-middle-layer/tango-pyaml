@@ -1,9 +1,10 @@
 import random
+from unittest.mock import patch
+
+from tango.pyaml.multi_attribute import MultiAttribute
 
 from .mocked_control_system_initialized import MockedControlSystemInitialized
 from .mocked_device_proxy import MockedDeviceProxy
-from unittest.mock import patch
-from tango.pyaml.multi_attribute import MultiAttribute
 
 
 class TestMultiAttributes:

@@ -1,6 +1,6 @@
+import pyaml
 import pytest
 
-import pyaml
 from tango.pyaml.attribute import Attribute
 from tango.pyaml.attribute_read_only import AttributeReadOnly
 from tango.pyaml.controlsystem import TangoControlSystem

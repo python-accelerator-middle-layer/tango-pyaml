@@ -1,21 +1,22 @@
 import logging
+from unittest.mock import patch
 
 import pyaml
 import pytest
+
+from tango.pyaml import __version__
+from tango.pyaml.attribute import Attribute, AttributeConfig
+from tango.pyaml.attribute_list import AttributeList, AttributeListConfig
+from tango.pyaml.attribute_list_read_only import (
+    AttributeListReadOnly,
+    AttributeListReadOnlyConfig,
+)
+from tango.pyaml.attribute_read_only import AttributeReadOnly, AttributeReadOnlyConfig
+from tango.pyaml.controlsystem import TangoControlSystem
 from tango.pyaml.static_catalog import StaticCatalog
 from tango.pyaml.static_catalog_entry import StaticCatalogEntry
-from tango.pyaml.controlsystem import TangoControlSystem
 
 from .mocked_device_proxy import MockedDeviceProxy
-from unittest.mock import patch
-from tango.pyaml.attribute_list import AttributeList
-from tango.pyaml.attribute_list import AttributeListConfig
-from tango.pyaml.attribute_list_read_only import AttributeListReadOnly
-from tango.pyaml.attribute_list_read_only import AttributeListReadOnlyConfig
-from tango.pyaml.attribute import Attribute, AttributeConfig
-from tango.pyaml.attribute_read_only import AttributeReadOnly
-from tango.pyaml.attribute_read_only import AttributeReadOnlyConfig
-from tango.pyaml import __version__
 
 
 def test_init_cs(caplog, config_tango_cs):

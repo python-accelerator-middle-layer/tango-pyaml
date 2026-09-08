@@ -1,8 +1,9 @@
-import tango
-import pyaml
+from typing import ClassVar
 
+import pyaml
+import tango
 from pyaml.control.deviceaccess import DeviceAccess
-from pyaml.validation import register_schema, DynamicValidation
+from pyaml.validation import DynamicValidation, register_schema
 
 from .attribute import Attribute, AttributeConfig
 from .attribute_read_only import AttributeReadOnly
@@ -25,7 +26,7 @@ class TangoCatalog(Catalog, DynamicValidation):
         If true, resolve Tango attribute names without querying Tango.
     """
 
-    _WRITABLE_TYPES = {
+    _WRITABLE_TYPES: ClassVar[set[tango.AttrWriteType]] = {
         tango.AttrWriteType.READ_WRITE,
         tango.AttrWriteType.WRITE,
         tango.AttrWriteType.READ_WITH_WRITE,

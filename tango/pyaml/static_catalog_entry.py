@@ -1,5 +1,5 @@
 from pyaml.control.deviceaccess import DeviceAccess
-from pyaml.validation import register_schema, DynamicValidation
+from pyaml.validation import DynamicValidation, register_schema
 
 PYAMLCLASS = "StaticCatalogEntry"
 
