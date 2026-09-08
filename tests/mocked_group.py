@@ -1,4 +1,4 @@
-from .mocked_device_proxy import *
+from .mocked_device_proxy import MockedDeviceAttribute, MockedDeviceProxy, MagicMock
 
 
 class MockedGroupReply:
