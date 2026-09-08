@@ -16,9 +16,9 @@ from tango.pyaml.attribute_list import AttributeList
 from tango.pyaml.attribute_list import AttributeListConfig
 from tango.pyaml.attribute_list_read_only import AttributeListReadOnly
 from tango.pyaml.attribute_list_read_only import AttributeListReadOnlyConfig
-from tango.pyaml.attribute import Attribute, ConfigModel as AttributeConfigModel
+from tango.pyaml.attribute import Attribute, AttributeConfig
 from tango.pyaml.attribute_read_only import AttributeReadOnly
-from tango.pyaml.attribute_read_only import ConfigModel as AttributeReadOnlyConfigModel
+from tango.pyaml.attribute_read_only import AttributeReadOnlyConfig
 from tango.pyaml import __version__
 
 
@@ -38,7 +38,7 @@ def test_init_cs(caplog, config_tango_cs):
 
 def test_laziness_init_cs_attribute(config_tango_cs_lazy_default, config):
     with patch("tango.DeviceProxy", side_effect=MockedDeviceProxy) as mock_ctor:
-        attr = Attribute(config)
+        attr = Attribute(**config.model_dump())
         mock_ctor.assert_not_called()
         attr.set_and_wait(42.0)
         mock_ctor.assert_called_once()
@@ -48,9 +48,7 @@ def test_laziness_init_cs_attribute(config_tango_cs_lazy_default, config):
 
 
 def test_catalog_can_be_configured_and_resolved():
-    device = AttributeReadOnly(
-        AttributeConfigModel(attribute="sys/tg_test/1/float_scalar", unit="A")
-    )
+    device = AttributeReadOnly(attribute="sys/tg_test/1/float_scalar", unit="A")
     catalog = StaticCatalog(
         StaticCatalogConfigModel(
             entries=[
@@ -84,7 +82,7 @@ def test_get_device_builds_attribute_from_config_model():
     )
 
     resolved = cs.get_device_access(
-        AttributeConfigModel(attribute="sys/tg_test/1/float_scalar", unit="A")
+        AttributeConfig(attribute="sys/tg_test/1/float_scalar", unit="A")
     )
 
     assert isinstance(resolved, Attribute)
@@ -98,7 +96,7 @@ def test_get_device_builds_read_only_attribute_from_config_model():
     )
 
     resolved = cs.get_device_access(
-        AttributeReadOnlyConfigModel(attribute="sys/tg_test/1/float_scalar", unit="A")
+        AttributeReadOnlyConfig(attribute="sys/tg_test/1/float_scalar", unit="A")
     )
 
     assert isinstance(resolved, AttributeReadOnly)
@@ -167,7 +165,7 @@ def test_get_device_rejects_preconstructed_device_access(config):
     cs = TangoControlSystem(ConfigModel(name="test_tango_cs"))
 
     with pytest.raises(pyaml.PyAMLException, match="Use attach\\(\\)"):
-        cs.get_device_access(Attribute(config))
+        cs.get_device_access(Attribute(**config.model_dump()))
 
 
 def test_get_device_requires_catalog_for_string_key():
@@ -178,7 +176,7 @@ def test_get_device_requires_catalog_for_string_key():
 
 
 def test_get_device_reports_unknown_catalog_key():
-    device = Attribute(AttributeConfigModel(attribute="sys/tg_test/1/float_scalar"))
+    device = Attribute(attribute="sys/tg_test/1/float_scalar")
     catalog = StaticCatalog(
         StaticCatalogConfigModel(
             entries=[

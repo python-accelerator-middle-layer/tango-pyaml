@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from pyaml.control.deviceaccesslist import DeviceAccessList
 
-from .attribute import Attribute, ConfigModel as AttrConfig
+from .attribute import Attribute, AttributeConfig
 from .device_factory import DeviceFactory
 
 PYAMLCLASS: str = "MultiAttribute"
@@ -46,10 +46,10 @@ class MultiAttribute(DeviceAccessList):
         self._cfg = cfg
         if self._cfg:
             for attribute in self._cfg.attributes:
-                attr_config = AttrConfig(
+                attr_config = AttributeConfig(
                     attribute=attribute, unit=self._cfg.unit, range=self._cfg.range
                 )
-                attr = Attribute(attr_config)
+                attr = Attribute(**attr_config.model_dump())
                 self._items.append(attr)
 
     def len(self) -> int:

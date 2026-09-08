@@ -37,7 +37,7 @@ class TestAttributes:
                 new=MockedControlSystemInitialized,
             ),
         ):
-            attr = Attribute(config)
+            attr = Attribute(**config.model_dump())
             attr.set_and_wait(42.0)
             assert attr.get() == 42.0
             assert attr.readback() == 42.0
@@ -57,7 +57,7 @@ class TestAttributes:
                 new=MockedControlSystemInitialized,
             ),
         ):
-            attr = Attribute(config)
+            attr = Attribute(**config.model_dump())
             with pytest.raises(pyaml.PyAMLException) as exc:
                 attr.readback()
             assert exc is not None
@@ -74,13 +74,13 @@ class TestAttributes:
             expected_message = (
                 "Tango attribute sys/tg_test/1/float_scalar is not writable."
             )
-            attr1 = Attribute(config)
+            attr1 = Attribute(**config.model_dump())
             with pytest.raises(pyaml.PyAMLException) as exc:
                 attr1.get()
             assert exc.value.message == expected_message
 
             # Read-only attributes cannot be sets.
-            attr = AttributeReadOnly(config)
+            attr = AttributeReadOnly(**config.model_dump())
             with pytest.raises(pyaml.PyAMLException) as exc2:
                 attr.set(10)
             assert exc2.value.message == expected_message
@@ -107,6 +107,6 @@ class TestAttributes:
                 new=MockedControlSystemInitialized,
             ),
         ):
-            attr1 = Attribute(config)
-            attr2 = Attribute(config)
+            attr1 = Attribute(**config.model_dump())
+            attr2 = Attribute(**config.model_dump())
             assert attr1._attribute_dev is attr2._attribute_dev

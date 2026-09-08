@@ -6,13 +6,10 @@ from pyaml import PyAMLException
 from pyaml.control.controlsystem import ControlSystem
 from pyaml.control.deviceaccess import DeviceAccess
 from . import __version__
-from .attribute import Attribute, ConfigModel as AttributeConfigModel
+from .attribute import Attribute, AttributeConfig
 from .attribute_list import AttributeList, AttributeListConfig
 from .attribute_list_read_only import AttributeListReadOnly, AttributeListReadOnlyConfig
-from .attribute_read_only import (
-    AttributeReadOnly,
-    ConfigModel as AttributeReadOnlyConfigModel,
-)
+from .attribute_read_only import AttributeReadOnly, AttributeReadOnlyConfig
 from .catalog import Catalog
 from .multi_attribute import MultiAttribute
 
@@ -152,11 +149,11 @@ class TangoControlSystem(ControlSystem):
             device = resolve(ref, self)
             return self._attach([device])[0]
 
-        if isinstance(ref, AttributeReadOnlyConfigModel):
-            return self._attach([AttributeReadOnly(ref)])[0]
+        if isinstance(ref, AttributeReadOnlyConfig):
+            return self._attach([AttributeReadOnly(**ref.model_dump())])[0]
 
-        if isinstance(ref, AttributeConfigModel):
-            return self._attach([Attribute(ref)])[0]
+        if isinstance(ref, AttributeConfig):
+            return self._attach([Attribute(**ref.model_dump())])[0]
 
         if isinstance(ref, AttributeListReadOnlyConfig):
             cfg = self._attach_attribute_list_config(ref)

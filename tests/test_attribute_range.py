@@ -1,4 +1,8 @@
-from .mocked_device_proxy import *
+from .mocked_device_proxy import (
+    MockedAttributeInfoEx,
+    MockedDeviceProxy,
+    tango,
+)
 
 from unittest.mock import patch
 from tango.pyaml.attribute import Attribute
@@ -29,7 +33,7 @@ def test_attribute_range_by_conf(config_range):
             new=MockedControlSystemInitialized,
         ),
     ):
-        attr = Attribute(config_range)
+        attr = Attribute(**config_range.model_dump())
 
         attr_range = attr.get_range()
         assert attr_range is not None
@@ -45,12 +49,12 @@ def test_attribute_range_by_conf_with_null(config_range_with_null):
             new=MockedControlSystemInitialized,
         ),
     ):
-        attr = Attribute(config_range_with_null)
+        attr = Attribute(**config_range_with_null.model_dump())
 
         attr_range = attr.get_range()
         assert attr_range is not None
         assert len(attr_range) == 2
-        assert attr_range[0] == 0 and attr_range[1] == None
+        assert attr_range[0] == 0 and attr_range[1] is None
 
 
 def test_attribute_range_by_device(config):
@@ -61,7 +65,7 @@ def test_attribute_range_by_device(config):
             new=MockedControlSystemInitialized,
         ),
     ):
-        attr = Attribute(config)
+        attr = Attribute(**config.model_dump())
 
         attr_range = attr.get_range()
         assert attr_range is not None
@@ -77,9 +81,9 @@ def test_attribute_range_by_device_min_only(config):
             new=MockedControlSystemInitialized,
         ),
     ):
-        attr = Attribute(config)
+        attr = Attribute(**config.model_dump())
 
         attr_range = attr.get_range()
         assert attr_range is not None
         assert len(attr_range) == 2
-        assert attr_range[0] == -10 and attr_range[1] == None
+        assert attr_range[0] == -10 and attr_range[1] is None
