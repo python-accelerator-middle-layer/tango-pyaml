@@ -1,15 +1,15 @@
-from pydantic import BaseModel, ConfigDict
-
 from pyaml.control.deviceaccess import DeviceAccess
+from pyaml.validation import register_schema, DynamicValidation
 
 PYAMLCLASS = "StaticCatalogEntry"
 
 
-class ConfigModel(BaseModel):
+@register_schema
+class StaticCatalogEntry(DynamicValidation):
     """
-    Configuration model for a static catalog entry.
+    A single key-to-device mapping in a static catalog.
 
-    Attributes
+    Parameters
     ----------
     key : str
         Catalog key used to look up the device.
@@ -17,29 +17,14 @@ class ConfigModel(BaseModel):
         Device access object returned when the key is resolved.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
-    key: str
-    device: DeviceAccess
-
-
-class StaticCatalogEntry:
-    """
-    A single key-to-device mapping in a static catalog.
-
-    Parameters
-    ----------
-    cfg : ConfigModel
-        Configuration containing the key and device.
-    """
-
-    def __init__(self, cfg: ConfigModel):
-        self._cfg = cfg
+    def __init__(self, key: str, device: DeviceAccess):
+        self.key = key
+        self.device = device
 
     def get_key(self) -> str:
         """Return the catalog key for this entry."""
-        return self._cfg.key
+        return self.key
 
     def get_device(self) -> DeviceAccess:
         """Return the device access object associated with this entry."""
-        return self._cfg.device
+        return self.device

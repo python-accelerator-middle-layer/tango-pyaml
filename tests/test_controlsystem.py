@@ -2,11 +2,7 @@ import logging
 
 import pyaml
 import pytest
-from tango.pyaml.static_catalog import ConfigModel as StaticCatalogConfigModel
 from tango.pyaml.static_catalog import StaticCatalog
-from tango.pyaml.static_catalog_entry import (
-    ConfigModel as StaticCatalogEntryConfigModel,
-)
 from tango.pyaml.static_catalog_entry import StaticCatalogEntry
 from tango.pyaml.controlsystem import TangoControlSystem
 
@@ -50,16 +46,12 @@ def test_laziness_init_cs_attribute(config_tango_cs_lazy_default, config):
 def test_catalog_can_be_configured_and_resolved():
     device = AttributeReadOnly(attribute="sys/tg_test/1/float_scalar", unit="A")
     catalog = StaticCatalog(
-        StaticCatalogConfigModel(
-            entries=[
-                StaticCatalogEntry(
-                    StaticCatalogEntryConfigModel(
-                        key="BPM_C01-01/x",
-                        device=device,
-                    )
-                )
-            ],
-        )
+        entries=[
+            StaticCatalogEntry(
+                key="BPM_C01-01/x",
+                device=device,
+            )
+        ],
     )
     cs = TangoControlSystem(
         name="test_tango_cs",
@@ -167,13 +159,7 @@ def test_get_device_requires_catalog_for_string_key():
 def test_get_device_reports_unknown_catalog_key():
     device = Attribute(attribute="sys/tg_test/1/float_scalar")
     catalog = StaticCatalog(
-        StaticCatalogConfigModel(
-            entries=[
-                StaticCatalogEntry(
-                    StaticCatalogEntryConfigModel(key="BPM_C01-01/x", device=device)
-                )
-            ],
-        )
+        entries=[StaticCatalogEntry(key="BPM_C01-01/x", device=device)],
     )
     cs = TangoControlSystem(name="test_tango_cs", catalog=catalog)
 

@@ -1,7 +1,6 @@
-from pydantic import ConfigDict, BaseModel
-
 from pyaml import PyAMLException
 from pyaml.control.deviceaccess import DeviceAccess
+from pyaml.validation import register_schema, DynamicValidation
 
 from .catalog import Catalog
 from .static_catalog_entry import StaticCatalogEntry
@@ -9,25 +8,8 @@ from .static_catalog_entry import StaticCatalogEntry
 PYAMLCLASS = "StaticCatalog"
 
 
-class ConfigModel(BaseModel):
-    """
-    Configuration model for a static catalog.
-
-    Attributes
-    ----------
-    name : str
-        Catalog identifier.
-    entries : list[StaticCatalogEntry]
-        Explicit list of key-to-device mappings. Must contain at least one
-        entry, and keys must be unique within the catalog.
-    """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
-    entries: list[StaticCatalogEntry]
-
-
-class StaticCatalog(Catalog):
+@register_schema
+class StaticCatalog(Catalog, DynamicValidation):
     """
     Catalog backed by a fixed list of key-to-device mappings.
 
@@ -37,8 +19,11 @@ class StaticCatalog(Catalog):
 
     Parameters
     ----------
-    cfg : ConfigModel
-        Configuration containing the catalog name and its entries.
+    name : str
+        Catalog identifier.
+    entries : list[StaticCatalogEntry]
+        Explicit list of key-to-device mappings. Must contain at least one
+        entry, and keys must be unique within the catalog.
 
     Raises
     ------
@@ -46,15 +31,16 @@ class StaticCatalog(Catalog):
         If ``cfg.entries`` is empty or contains duplicate keys.
     """
 
-    def __init__(self, cfg: ConfigModel):
+    def __init__(self, entries: list[StaticCatalogEntry]):
         super().__init__()
-        self._cfg = cfg
-        if len(cfg.entries) == 0:
+
+        self._entries = entries
+        if len(self._entries) == 0:
             raise PyAMLException(
                 "StaticCatalog.entries must contain at least one entry"
             )
         self._refs: dict[str, DeviceAccess] = {}
-        for entry in cfg.entries:
+        for entry in self._entries:
             key = entry.get_key()
             if key in self._refs:
                 raise PyAMLException(
@@ -87,6 +73,4 @@ class StaticCatalog(Catalog):
         try:
             return self._refs[key]
         except KeyError as exc:
-            raise PyAMLException(
-                f"Catalog cannot resolve key '{key}'"
-            ) from exc
+            raise PyAMLException(f"Catalog cannot resolve key '{key}'") from exc
