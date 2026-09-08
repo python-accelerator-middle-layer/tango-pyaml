@@ -1,8 +1,8 @@
 import tango
 import pyaml
 
-from pydantic import ConfigDict, BaseModel
 from pyaml.control.deviceaccess import DeviceAccess
+from pyaml.validation import register_schema, DynamicValidation
 
 from .attribute import Attribute, AttributeConfig
 from .attribute_read_only import AttributeReadOnly
@@ -12,30 +12,17 @@ from .tango_pyaml_utils import tango_to_PyAMLException, to_float_or_none
 PYAMLCLASS = "TangoCatalog"
 
 
-class ConfigModel(BaseModel):
-    """
-    Configuration model for a Tango catalog.
-
-    Attributes
-    ----------
-    name : str
-        Catalog identifier.
-    disconnected : bool
-        If true, resolve Tango attribute names without querying Tango.
-    """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
-    disconnected: bool = False
-
-
-class TangoCatalog(Catalog):
+@register_schema
+class TangoCatalog(Catalog, DynamicValidation):
     """
     Catalog resolving keys that are direct Tango attribute references.
 
     Keys can be plain Tango attribute paths (``domain/family/member/attribute``)
     or indexed references into a SPECTRUM attribute
     (``domain/family/member/attribute@index``).
+
+    disconnected : bool
+        If true, resolve Tango attribute names without querying Tango.
     """
 
     _WRITABLE_TYPES = {
@@ -44,9 +31,10 @@ class TangoCatalog(Catalog):
         tango.AttrWriteType.READ_WITH_WRITE,
     }
 
-    def __init__(self, cfg: ConfigModel):
+    def __init__(self, disconnected: bool = False):
         super().__init__()
-        self._cfg = cfg
+
+        self._disconnected = disconnected
         # Resolved DeviceAccess objects are bound to one control-system context
         # because metadata lookup depends on that control system's Tango host.
         self._refs: dict[tuple[int, str], DeviceAccess] = {}
@@ -114,7 +102,7 @@ class TangoCatalog(Catalog):
         return self._refs[cache_key]
 
     def is_disconnected(self) -> bool:
-        return self._cfg.disconnected
+        return self._disconnected
 
     def get_data_format(
         self, key: str, control_system: object | None = None

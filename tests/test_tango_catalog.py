@@ -9,7 +9,7 @@ from .mocked_device_proxy import MockedAttributeInfoEx, MockedAttributeProxy
 from tango.pyaml.attribute import Attribute
 from tango.pyaml.attribute_read_only import AttributeReadOnly
 from tango.pyaml.controlsystem import TangoControlSystem
-from tango.pyaml.tango_catalog import ConfigModel, TangoCatalog
+from tango.pyaml.tango_catalog import TangoCatalog
 
 
 def build_control_system(catalog: TangoCatalog, name="live"):
@@ -18,7 +18,7 @@ def build_control_system(catalog: TangoCatalog, name="live"):
 
 
 def test_tango_catalog_disconnected_resolves_without_querying_tango():
-    catalog = TangoCatalog(ConfigModel(disconnected=True))
+    catalog = TangoCatalog(disconnected=True)
     control_system = build_control_system(catalog)
 
     with patch("tango.AttributeProxy") as attr_proxy:
@@ -40,7 +40,7 @@ def test_tango_catalog_connected_resolves_writable_attribute():
         max_value="12.0",
         data_format=tango.AttrDataFormat.SPECTRUM,
     )
-    catalog = TangoCatalog(ConfigModel())
+    catalog = TangoCatalog()
     control_system = build_control_system(catalog)
 
     with patch(
@@ -64,7 +64,7 @@ def test_tango_catalog_connected_resolves_read_only_attribute():
     attr_config = MockedAttributeInfoEx(
         name="position", writable=tango.AttrWriteType.READ, unit="mm"
     )
-    catalog = TangoCatalog(ConfigModel())
+    catalog = TangoCatalog()
     control_system = build_control_system(catalog)
 
     with patch(
@@ -78,7 +78,7 @@ def test_tango_catalog_connected_resolves_read_only_attribute():
 
 
 def test_tango_catalog_caches_resolved_devices():
-    catalog = TangoCatalog(ConfigModel())
+    catalog = TangoCatalog()
     control_system = build_control_system(catalog)
 
     with patch(
@@ -93,7 +93,7 @@ def test_tango_catalog_caches_resolved_devices():
 
 
 def test_tango_catalog_cache_is_bound_to_control_system_resolver():
-    catalog = TangoCatalog(ConfigModel())
+    catalog = TangoCatalog()
     live = build_control_system(catalog, name="live")
     ops = build_control_system(catalog, name="ops")
 
@@ -112,7 +112,7 @@ def test_tango_catalog_cache_is_bound_to_control_system_resolver():
 
 def test_tango_catalog_connected_metadata_uses_control_system_tango_host():
     key = "domain/family/member/current"
-    catalog = TangoCatalog(ConfigModel())
+    catalog = TangoCatalog()
     live = TangoControlSystem(name="live", tango_host="live-db:10000", catalog=catalog)
     ops = TangoControlSystem(name="ops", tango_host="ops-db:10000", catalog=catalog)
 
@@ -147,7 +147,7 @@ def test_tango_catalog_connected_metadata_uses_control_system_tango_host():
 
 
 def test_tango_catalog_can_be_used_through_tango_control_system():
-    catalog = TangoCatalog(ConfigModel(disconnected=True))
+    catalog = TangoCatalog(disconnected=True)
     control_system = TangoControlSystem(name="live", catalog=catalog)
 
     device = control_system.get_device_access("domain/family/member/attribute")
@@ -157,7 +157,7 @@ def test_tango_catalog_can_be_used_through_tango_control_system():
 
 
 def test_tango_catalog_rejects_non_tango_control_system():
-    catalog = TangoCatalog(ConfigModel())
+    catalog = TangoCatalog()
 
     with pytest.raises(
         pyaml.PyAMLException, match="can only resolve through TangoControlSystem"
@@ -169,7 +169,7 @@ def test_tango_catalog_rejects_external_tango_control_system_class():
     class TangoControlSystem:
         pass
 
-    catalog = TangoCatalog(ConfigModel())
+    catalog = TangoCatalog()
 
     with pytest.raises(
         pyaml.PyAMLException, match="can only resolve through TangoControlSystem"
@@ -178,7 +178,7 @@ def test_tango_catalog_rejects_external_tango_control_system_class():
 
 
 def test_tango_catalog_requires_control_system_attachment():
-    catalog = TangoCatalog(ConfigModel())
+    catalog = TangoCatalog()
 
     with pytest.raises(
         pyaml.PyAMLException, match="needs a TangoControlSystem context"
@@ -187,7 +187,7 @@ def test_tango_catalog_requires_control_system_attachment():
 
 
 def test_tango_catalog_rejects_invalid_tango_reference():
-    catalog = TangoCatalog(ConfigModel())
+    catalog = TangoCatalog()
     control_system = build_control_system(catalog)
 
     with pytest.raises(
@@ -197,7 +197,7 @@ def test_tango_catalog_rejects_invalid_tango_reference():
 
 
 def test_tango_catalog_rejects_invalid_index():
-    catalog = TangoCatalog(ConfigModel())
+    catalog = TangoCatalog()
     control_system = build_control_system(catalog)
 
     with pytest.raises(pyaml.PyAMLException, match="invalid index"):
@@ -205,7 +205,7 @@ def test_tango_catalog_rejects_invalid_index():
 
 
 def test_tango_catalog_disconnected_resolves_indexed_attribute():
-    catalog = TangoCatalog(ConfigModel(disconnected=True))
+    catalog = TangoCatalog(disconnected=True)
     control_system = build_control_system(catalog)
 
     with patch("tango.AttributeProxy") as attr_proxy:
@@ -225,7 +225,7 @@ def test_tango_catalog_connected_resolves_indexed_writable_spectrum():
         unit="mm",
         data_format=tango.AttrDataFormat.SPECTRUM,
     )
-    catalog = TangoCatalog(ConfigModel())
+    catalog = TangoCatalog()
     control_system = build_control_system(catalog)
 
     with patch(
@@ -251,7 +251,7 @@ def test_tango_catalog_connected_resolves_indexed_read_only_spectrum():
         unit="mm",
         data_format=tango.AttrDataFormat.SPECTRUM,
     )
-    catalog = TangoCatalog(ConfigModel())
+    catalog = TangoCatalog()
     control_system = build_control_system(catalog)
 
     with patch(
@@ -270,7 +270,7 @@ def test_tango_catalog_connected_rejects_indexed_scalar_attribute():
         writable=tango.AttrWriteType.READ_WRITE,
         data_format=tango.AttrDataFormat.SCALAR,
     )
-    catalog = TangoCatalog(ConfigModel())
+    catalog = TangoCatalog()
     control_system = build_control_system(catalog)
 
     with patch(
@@ -286,7 +286,7 @@ def test_tango_catalog_indexed_caches_resolved_devices():
         name="position",
         data_format=tango.AttrDataFormat.SPECTRUM,
     )
-    catalog = TangoCatalog(ConfigModel())
+    catalog = TangoCatalog()
     control_system = build_control_system(catalog)
 
     with patch(
@@ -301,7 +301,7 @@ def test_tango_catalog_indexed_caches_resolved_devices():
 
 
 def test_tango_catalog_wraps_tango_errors():
-    catalog = TangoCatalog(ConfigModel())
+    catalog = TangoCatalog()
     control_system = build_control_system(catalog)
 
     with patch("tango.AttributeProxy", side_effect=tango.DevFailed()):
@@ -319,7 +319,7 @@ def test_tango_catalog_rejects_incomplete_tango_config():
         max_value = "1"
         data_format = tango.AttrDataFormat.SCALAR
 
-    catalog = TangoCatalog(ConfigModel())
+    catalog = TangoCatalog()
     control_system = build_control_system(catalog)
 
     with patch(
