@@ -4,7 +4,7 @@ import yaml
 from tango.pyaml.attribute_list import AttributeListConfig as GrpCM
 from tango.pyaml.attribute import AttributeConfig as AttrCM
 from tango.pyaml.multi_attribute import ConfigModel as MultiAttrCM
-from tango.pyaml.controlsystem import ConfigModel as CsCM, TangoControlSystem
+from tango.pyaml.controlsystem import TangoControlSystem
 from tango.pyaml.device_factory import DeviceFactory
 
 
@@ -98,7 +98,7 @@ debug_level: INFO
 lazy_devices: false
 """
     cfg_dict = yaml.safe_load(conf)
-    return CsCM(**cfg_dict)
+    return cfg_dict
 
 
 @pytest.fixture
@@ -109,7 +109,7 @@ tango_host: tangodb:10000
 debug_level: INFO
 """
     cfg_dict = yaml.safe_load(conf)
-    return CsCM(**cfg_dict)
+    return cfg_dict
 
 
 @pytest.fixture
@@ -120,4 +120,4 @@ tango_host: this_is_an_error
 debug_level: nope
 """
     cfg_dict = yaml.safe_load(conf)
-    return CsCM(**cfg_dict)
+    return cfg_dict

@@ -3,7 +3,6 @@ import pytest
 import pyaml
 from tango.pyaml.attribute import Attribute
 from tango.pyaml.attribute_read_only import AttributeReadOnly
-from tango.pyaml.controlsystem import ConfigModel as TangoControlSystemConfigModel
 from tango.pyaml.controlsystem import TangoControlSystem
 from tango.pyaml.static_catalog import ConfigModel as StaticCatalogConfigModel
 from tango.pyaml.static_catalog import StaticCatalog
@@ -93,10 +92,8 @@ def test_static_catalog_raises_on_unknown_key():
 def test_static_catalog_is_shared_across_control_systems():
     device = make_attribute()
     catalog = make_catalog(entries=[make_entry("BPM/x", device=device)])
-    live = TangoControlSystem(
-        TangoControlSystemConfigModel(name="live", catalog=catalog)
-    )
-    ops = TangoControlSystem(TangoControlSystemConfigModel(name="ops", catalog=catalog))
+    live = TangoControlSystem(name="live", catalog=catalog)
+    ops = TangoControlSystem(name="ops", catalog=catalog)
 
     assert live.get_catalog() is catalog
     assert ops.get_catalog() is catalog
@@ -122,9 +119,7 @@ def test_static_catalog_works_with_attribute_read_only():
 def test_static_catalog_can_be_used_through_tango_control_system():
     device = make_attribute("sr/bpm/c01-01/x", unit="mm")
     catalog = make_catalog(entries=[make_entry("BPM/x", device=device)])
-    control_system = TangoControlSystem(
-        TangoControlSystemConfigModel(name="live", catalog=catalog)
-    )
+    control_system = TangoControlSystem(name="live", catalog=catalog)
 
     resolved = control_system.get_device_access("BPM/x")
 

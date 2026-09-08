@@ -8,13 +8,12 @@ from pyaml.control.controlsystem import ControlSystemAdapter
 from .mocked_device_proxy import MockedAttributeInfoEx, MockedAttributeProxy
 from tango.pyaml.attribute import Attribute
 from tango.pyaml.attribute_read_only import AttributeReadOnly
-from tango.pyaml.controlsystem import ConfigModel as TangoControlSystemConfigModel
 from tango.pyaml.controlsystem import TangoControlSystem
 from tango.pyaml.tango_catalog import ConfigModel, TangoCatalog
 
 
 def build_control_system(catalog: TangoCatalog, name="live"):
-    control_system = TangoControlSystem(TangoControlSystemConfigModel(name=name, catalog=catalog))
+    control_system = TangoControlSystem(name=name, catalog=catalog)
     return control_system
 
 
@@ -114,10 +113,8 @@ def test_tango_catalog_cache_is_bound_to_control_system_resolver():
 def test_tango_catalog_connected_metadata_uses_control_system_tango_host():
     key = "domain/family/member/current"
     catalog = TangoCatalog(ConfigModel())
-    live = TangoControlSystem(
-        TangoControlSystemConfigModel(name="live", tango_host="live-db:10000", catalog=catalog))
-    ops = TangoControlSystem(
-        TangoControlSystemConfigModel(name="ops", tango_host="ops-db:10000", catalog=catalog))
+    live = TangoControlSystem(name="live", tango_host="live-db:10000", catalog=catalog)
+    ops = TangoControlSystem(name="ops", tango_host="ops-db:10000", catalog=catalog)
 
     attr_configs = {
         "//live-db:10000/domain/family/member/current": MockedAttributeInfoEx(
@@ -151,7 +148,7 @@ def test_tango_catalog_connected_metadata_uses_control_system_tango_host():
 
 def test_tango_catalog_can_be_used_through_tango_control_system():
     catalog = TangoCatalog(ConfigModel(disconnected=True))
-    control_system = TangoControlSystem(TangoControlSystemConfigModel(name="live", catalog=catalog))
+    control_system = TangoControlSystem(name="live", catalog=catalog)
 
     device = control_system.get_device_access("domain/family/member/attribute")
 
@@ -310,8 +307,7 @@ def test_tango_catalog_wraps_tango_errors():
     with patch("tango.AttributeProxy", side_effect=tango.DevFailed()):
         with pytest.raises(
             pyaml.PyAMLException,
-            match="Tango catalog"
-                  " cannot resolve 'domain/family/member/attribute'",
+            match="Tango catalog cannot resolve 'domain/family/member/attribute'",
         ):
             catalog.resolve("domain/family/member/attribute", control_system)
 

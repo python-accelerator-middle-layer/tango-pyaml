@@ -1,10 +1,12 @@
 import logging
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 from pyaml import PyAMLException
 from pyaml.control.controlsystem import ControlSystem
 from pyaml.control.deviceaccess import DeviceAccess
+from pyaml.common.element import __pyaml_repr__
+from pyaml.validation import register_schema, DynamicValidation
 from . import __version__
 from .attribute import Attribute, AttributeConfig
 from .attribute_list import AttributeList, AttributeListConfig
@@ -18,11 +20,12 @@ PYAMLCLASS: str = "TangoControlSystem"
 logger = logging.getLogger(__name__)
 
 
-class ConfigModel(BaseModel):
+@register_schema
+class TangoControlSystem(ControlSystem, DynamicValidation):
     """
-    Configuration model for a Tango Control System.
+    Tango-specific implementation of a Control System.
 
-    Attributes
+    Parameters
     ----------
     name : str
         Name of the control system.
@@ -40,43 +43,36 @@ class ConfigModel(BaseModel):
         Device timeout in milli seconds.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
-    name: str
-    tango_host: str | None = None
-    catalog: Catalog | None = None
-    debug_level: str | int | None = None
-    lazy_devices: bool = True
-    timeout_ms: int = 3000
-
-
-class TangoControlSystem(ControlSystem):
-    """
-    Tango-specific implementation of a Control System.
-
-    Parameters
-    ----------
-    cfg : ConfigModel
-        Configuration parameters including name, host and debug level.
-    """
-
-    def __init__(self, cfg: ConfigModel):
+    def __init__(
+        self,
+        name: str,
+        tango_host: str | None = None,
+        catalog: Catalog | None = None,
+        debug_level: str | int | None = None,
+        lazy_devices: bool = True,
+        timeout_ms: int = 3000,
+    ):
         super().__init__()
-        self._cfg = cfg
+        self._name = name
+        self._tango_host = tango_host
+        self._catalog = catalog
+        self._debug_level = debug_level
+        self._lazy_devices = lazy_devices
+        self._timeout_ms = timeout_ms
         self.__devices = {}  # Dict containing all attached DeviceAccess
 
-        if self._cfg.debug_level:
-            if isinstance(self._cfg.debug_level, int):
-                log_level = self._cfg.debug_level
+        if self._debug_level:
+            if isinstance(self._debug_level, int):
+                log_level = self._debug_level
             else:
-                log_level = getattr(logging, self._cfg.debug_level, logging.WARNING)
+                log_level = getattr(logging, self._debug_level, logging.WARNING)
             logger.parent.setLevel(log_level)
             logger.setLevel(log_level)
 
         logger.log(
             logging.WARNING,
-            f"PyAML Tango control system binding ({__version__}) initialized with name '{self._cfg.name}'"
-            f" and TANGO_HOST={self._cfg.tango_host}",
+            f"PyAML Tango control system binding ({__version__}) initialized with name '{self._name}'"
+            f" and TANGO_HOST={self._tango_host}",
         )
 
     def attach_array(self, devs: list[DeviceAccess]) -> list[DeviceAccess]:
@@ -198,7 +194,7 @@ class TangoControlSystem(ControlSystem):
         str
             Name of the control system.
         """
-        return self._cfg.name
+        return self._name
 
     def get_tango_host(self) -> str | None:
         """
@@ -209,7 +205,7 @@ class TangoControlSystem(ControlSystem):
         str | None
             Tango host URL, or ``None`` when unconfigured.
         """
-        return self._cfg.tango_host
+        return self._tango_host
 
     def get_aggregator(self) -> MultiAttribute | None:
         """Returns a new empty DeviceAccessList. If None is returned serialized readings/writtings are performed"""
@@ -246,7 +242,7 @@ class TangoControlSystem(ControlSystem):
         Catalog
             The catalog
         """
-        return self._cfg.catalog
+        return self._catalog
 
     def __repr__(self):
-        return repr(self._cfg).replace("ConfigModel", self.__class__.__name__)
+        return __pyaml_repr__(self)
