@@ -13,11 +13,9 @@ from tango.pyaml.controlsystem import ConfigModel, TangoControlSystem
 from .mocked_device_proxy import MockedDeviceProxy
 from unittest.mock import patch
 from tango.pyaml.attribute_list import AttributeList
-from tango.pyaml.attribute_list import ConfigModel as AttributeListConfigModel
+from tango.pyaml.attribute_list import AttributeListConfig
 from tango.pyaml.attribute_list_read_only import AttributeListReadOnly
-from tango.pyaml.attribute_list_read_only import (
-    ConfigModel as AttributeListReadOnlyConfigModel,
-)
+from tango.pyaml.attribute_list_read_only import AttributeListReadOnlyConfig
 from tango.pyaml.attribute import Attribute, ConfigModel as AttributeConfigModel
 from tango.pyaml.attribute_read_only import AttributeReadOnly
 from tango.pyaml.attribute_read_only import ConfigModel as AttributeReadOnlyConfigModel
@@ -114,7 +112,7 @@ def test_get_device_builds_attribute_list_from_config_model():
     )
 
     resolved = cs.get_device_access(
-        AttributeListConfigModel(
+        AttributeListConfig(
             name="group",
             attributes=[
                 "sys/tg_test/1/float_scalar",
@@ -140,7 +138,7 @@ def test_get_device_builds_read_only_attribute_list_from_config_model():
     )
 
     resolved = cs.get_device_access(
-        AttributeListReadOnlyConfigModel(
+        AttributeListReadOnlyConfig(
             name="group",
             attributes=[
                 "sys/tg_test/1/float_scalar",

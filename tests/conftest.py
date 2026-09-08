@@ -1,7 +1,7 @@
 import pytest
 import yaml
 
-from tango.pyaml.attribute_list import ConfigModel as GrpCM
+from tango.pyaml.attribute_list import AttributeListConfig as GrpCM
 from tango.pyaml.attribute import ConfigModel as AttrCM
 from tango.pyaml.multi_attribute import ConfigModel as MultiAttrCM
 from tango.pyaml.controlsystem import ConfigModel as CsCM, TangoControlSystem

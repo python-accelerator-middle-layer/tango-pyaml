@@ -4,7 +4,11 @@ import pytest
 from tango.pyaml.attribute_read_only import AttributeReadOnly
 
 from .mocked_control_system_initialized import MockedControlSystemInitialized
-from .mocked_device_proxy import *
+from .mocked_device_proxy import (
+    MockedAttributeInfoEx,
+    MockedDeviceProxy,
+    tango,
+)
 from .mocked_group import MockedGroup
 from unittest.mock import patch
 from tango.pyaml.attribute import Attribute
@@ -89,7 +93,7 @@ class TestAttributes:
                 new=MockedControlSystemInitialized,
             ),
         ):
-            attr_list = AttributeList(config_group)
+            attr_list = AttributeList(**config_group.model_dump())
             attr_list.set_and_wait(10)
             vals = attr_list.readback()
             for val in vals:

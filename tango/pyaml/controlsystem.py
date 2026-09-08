@@ -7,11 +7,8 @@ from pyaml.control.controlsystem import ControlSystem
 from pyaml.control.deviceaccess import DeviceAccess
 from . import __version__
 from .attribute import Attribute, ConfigModel as AttributeConfigModel
-from .attribute_list import AttributeList, ConfigModel as AttributeListConfigModel
-from .attribute_list_read_only import (
-    AttributeListReadOnly,
-    ConfigModel as AttributeListReadOnlyConfigModel,
-)
+from .attribute_list import AttributeList, AttributeListConfig
+from .attribute_list_read_only import AttributeListReadOnly, AttributeListReadOnlyConfig
 from .attribute_read_only import (
     AttributeReadOnly,
     ConfigModel as AttributeReadOnlyConfigModel,
@@ -161,11 +158,13 @@ class TangoControlSystem(ControlSystem):
         if isinstance(ref, AttributeConfigModel):
             return self._attach([Attribute(ref)])[0]
 
-        if isinstance(ref, AttributeListReadOnlyConfigModel):
-            return AttributeListReadOnly(self._attach_attribute_list_config(ref))
+        if isinstance(ref, AttributeListReadOnlyConfig):
+            cfg = self._attach_attribute_list_config(ref)
+            return AttributeListReadOnly(**cfg.model_dump())
 
-        if isinstance(ref, AttributeListConfigModel):
-            return AttributeList(self._attach_attribute_list_config(ref))
+        if isinstance(ref, AttributeListConfig):
+            cfg = self._attach_attribute_list_config(ref)
+            return AttributeList(**cfg.model_dump())
 
         if isinstance(ref, BaseModel):
             raise PyAMLException(
@@ -179,8 +178,8 @@ class TangoControlSystem(ControlSystem):
         )
 
     def _attach_attribute_list_config(
-        self, cfg: AttributeListConfigModel
-    ) -> AttributeListConfigModel:
+        self, cfg: AttributeListConfig
+    ) -> AttributeListConfig:
         tango_host = self.get_tango_host()
         if not tango_host:
             return cfg
