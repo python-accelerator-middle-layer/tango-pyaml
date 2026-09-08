@@ -119,8 +119,8 @@ class TangoControlSystem(ControlSystem, DynamicValidation):
 
         if isinstance(ref, DeviceAccess):
             raise PyAMLException(
-                "TangoControlSystem.get_device_access() expects a catalog key, Tango "
-                "ConfigModel, or None. Use attach() for already constructed "
+                "TangoControlSystem.get_device_access() expects a catalog key "
+                "or None. Use attach() for already constructed "
                 "DeviceAccess objects."
             )
 
@@ -167,7 +167,7 @@ class TangoControlSystem(ControlSystem, DynamicValidation):
 
         raise PyAMLException(
             f"TangoControlSystem.get_device_access() cannot resolve references of type "
-            f"{type(ref).__name__}; expected str, Tango ConfigModel, or None."
+            f"{type(ref).__name__}; expected str or None."
         )
 
     def _attach_attribute_list_config(
