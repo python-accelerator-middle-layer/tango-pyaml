@@ -1,5 +1,5 @@
-import tango
 import pyaml
+import tango
 
 
 def to_float_or_none(s):

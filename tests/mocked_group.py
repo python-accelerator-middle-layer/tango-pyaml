@@ -1,4 +1,4 @@
-from .mocked_device_proxy import *
+from .mocked_device_proxy import MagicMock, MockedDeviceAttribute, MockedDeviceProxy
 
 
 class MockedGroupReply:
@@ -53,7 +53,7 @@ class MockedGroup(MagicMock):
             try:
                 idx = dev.command_inout_asynch(command_name)
                 replies_id[name] = idx
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 replies.append(MockedGroupCmdReply(name, command_name, None, e))
         for name, idx in replies_id.items():
             dev = self.devices[name]
@@ -68,7 +68,7 @@ class MockedGroup(MagicMock):
             try:
                 idx = dev.read_attribute_asynch(attr_name)
                 replies_id[name] = idx
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 replies.append(MockedGroupAttrReply(name, attr_name, None, e))
         for name, idx in replies_id.items():
             dev = self.devices[name]
@@ -94,7 +94,7 @@ class MockedGroup(MagicMock):
             try:
                 dev.write_attribute(attr_name, value)
                 replies.append(MockedGroupReply(name, attr_name))
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 replies.append(MockedGroupReply(name, attr_name, e))
         return replies
 

@@ -21,4 +21,3 @@ class Catalog(metaclass=ABCMeta):
         """
         Return a configuration model for a DeviceAccess
         """
-        pass

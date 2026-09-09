@@ -1,10 +1,11 @@
-import tango
+from typing import ClassVar
+
 import pyaml
-
-from pydantic import ConfigDict, BaseModel
+import tango
 from pyaml.control.deviceaccess import DeviceAccess
+from pyaml.validation import DynamicValidation, register_schema
 
-from .attribute import Attribute, ConfigModel as AttributeConfigModel
+from .attribute import Attribute, AttributeConfig
 from .attribute_read_only import AttributeReadOnly
 from .catalog import Catalog
 from .tango_pyaml_utils import tango_to_PyAMLException, to_float_or_none
@@ -12,41 +13,29 @@ from .tango_pyaml_utils import tango_to_PyAMLException, to_float_or_none
 PYAMLCLASS = "TangoCatalog"
 
 
-class ConfigModel(BaseModel):
-    """
-    Configuration model for a Tango catalog.
-
-    Attributes
-    ----------
-    name : str
-        Catalog identifier.
-    disconnected : bool
-        If true, resolve Tango attribute names without querying Tango.
-    """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
-    disconnected: bool = False
-
-
-class TangoCatalog(Catalog):
+@register_schema
+class TangoCatalog(Catalog, DynamicValidation):
     """
     Catalog resolving keys that are direct Tango attribute references.
 
     Keys can be plain Tango attribute paths (``domain/family/member/attribute``)
     or indexed references into a SPECTRUM attribute
     (``domain/family/member/attribute@index``).
+
+    disconnected : bool
+        If true, resolve Tango attribute names without querying Tango.
     """
 
-    _WRITABLE_TYPES = {
+    _WRITABLE_TYPES: ClassVar[set[tango.AttrWriteType]] = {
         tango.AttrWriteType.READ_WRITE,
         tango.AttrWriteType.WRITE,
         tango.AttrWriteType.READ_WITH_WRITE,
     }
 
-    def __init__(self, cfg: ConfigModel):
+    def __init__(self, disconnected: bool = False):
         super().__init__()
-        self._cfg = cfg
+
+        self._disconnected = disconnected
         # Resolved DeviceAccess objects are bound to one control-system context
         # because metadata lookup depends on that control system's Tango host.
         self._refs: dict[tuple[int, str], DeviceAccess] = {}
@@ -114,7 +103,7 @@ class TangoCatalog(Catalog):
         return self._refs[cache_key]
 
     def is_disconnected(self) -> bool:
-        return self._cfg.disconnected
+        return self._disconnected
 
     def get_data_format(
         self, key: str, control_system: object | None = None
@@ -149,7 +138,9 @@ class TangoCatalog(Catalog):
             )
 
         if not isinstance(control_system, TangoControlSystem):
-            raise pyaml.PyAMLException("Tango catalog can only resolve through TangoControlSystem")
+            raise pyaml.PyAMLException(
+                "Tango catalog can only resolve through TangoControlSystem"
+            )
 
     def _parse_key(self, key: str) -> tuple[str, int | None]:
         """
@@ -166,14 +157,18 @@ class TangoCatalog(Catalog):
             not a valid integer.
         """
         if not isinstance(key, str):
-            raise pyaml.PyAMLException(f"Tango catalog expects string keys, got {type(key).__name__}")
+            raise pyaml.PyAMLException(
+                f"Tango catalog expects string keys, got {type(key).__name__}"
+            )
 
         if "@" in key:
             attr_path, idx_str = key.rsplit("@", 1)
             try:
                 index = int(idx_str)
             except ValueError as exc:
-                raise pyaml.PyAMLException(f"Tango catalog invalid index '{idx_str}' in key '{key}'.") from exc
+                raise pyaml.PyAMLException(
+                    f"Tango catalog invalid index '{idx_str}' in key '{key}'."
+                ) from exc
         else:
             attr_path = key
             index = None
@@ -194,16 +189,14 @@ class TangoCatalog(Catalog):
         # In disconnected mode, keep all metadata local. In particular, setting
         # range avoids Attribute.get_range() from lazily querying Tango later.
         self._data_formats[cache_key] = tango.AttrDataFormat.FMT_UNKNOWN
-        return Attribute(AttributeConfigModel(attribute=key, range=(None, None)))
+        return Attribute(attribute=key, range=(None, None))
 
     def _build_disconnected_indexed(
         self, cache_key: tuple[int, str], attr_path: str, index: int
     ) -> DeviceAccess:
         # Cannot verify SPECTRUM in disconnected mode; store FMT_UNKNOWN.
         self._data_formats[cache_key] = tango.AttrDataFormat.FMT_UNKNOWN
-        return Attribute(
-            AttributeConfigModel(attribute=attr_path, index=index, range=(None, None))
-        )
+        return Attribute(attribute=attr_path, index=index, range=(None, None))
 
     def _build_connected_attribute(
         self, cache_key: tuple[int, str], control_system: object, key: str
@@ -215,17 +208,19 @@ class TangoCatalog(Catalog):
             attr_config = tango.AttributeProxy(tango_attr_name).get_config()
         except tango.DevFailed as df:
             pyaml_exception = tango_to_PyAMLException(df)
-            raise pyaml.PyAMLException(f"Tango catalog cannot resolve '{key}': {pyaml_exception}") from df
+            raise pyaml.PyAMLException(
+                f"Tango catalog cannot resolve '{key}': {pyaml_exception}"
+            ) from df
 
         unit, attr_range, data_format, writable = self._read_config_metadata(
             attr_config, key
         )
         self._data_formats[cache_key] = data_format
-        cfg = AttributeConfigModel(attribute=key, unit=unit, range=attr_range)
+        cfg = AttributeConfig(attribute=key, unit=unit, range=attr_range)
 
         if writable in self._WRITABLE_TYPES:
-            return Attribute(cfg)
-        return AttributeReadOnly(cfg)
+            return Attribute(**cfg.model_dump())
+        return AttributeReadOnly(**cfg.model_dump())
 
     def _build_connected_indexed(
         self,
@@ -262,13 +257,13 @@ class TangoCatalog(Catalog):
             )
 
         self._data_formats[cache_key] = tango.AttrDataFormat.SPECTRUM
-        cfg = AttributeConfigModel(
+        cfg = AttributeConfig(
             attribute=attr_path, index=index, unit=unit, range=attr_range
         )
 
         if writable in self._WRITABLE_TYPES:
-            return Attribute(cfg)
-        return AttributeReadOnly(cfg)
+            return Attribute(**cfg.model_dump())
+        return AttributeReadOnly(**cfg.model_dump())
 
     def _read_config_metadata(
         self, attr_config, key: str
