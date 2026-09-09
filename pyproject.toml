@@ -56,6 +56,9 @@ dev = [
     "pre-commit",
 ]
 
+[project.entry-points."pyaml.schemas"]
+tango_pyaml = "tango.pyaml"
+
 [project.urls]
 Homepage = "https://github.com/python-accelerator-middle-layer/tango-pyaml"
 Documentation = "https://python-accelerator-middle-layer.github.io/tango-pyaml/"

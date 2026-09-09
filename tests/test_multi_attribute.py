@@ -1,9 +1,10 @@
 import random
+from unittest.mock import patch
+
+from tango.pyaml.multi_attribute import MultiAttribute
 
 from .mocked_control_system_initialized import MockedControlSystemInitialized
 from .mocked_device_proxy import MockedDeviceProxy
-from unittest.mock import patch
-from tango.pyaml.multi_attribute import MultiAttribute
 
 
 class TestMultiAttributes:
@@ -15,7 +16,7 @@ class TestMultiAttributes:
                 new=MockedControlSystemInitialized,
             ),
         ):
-            attr_list = MultiAttribute(config_multi)
+            attr_list = MultiAttribute(**config_multi.model_dump())
             rand = random.Random()
             values = [rand.random() for _ in range(4)]
             attr_list.set(values)
@@ -32,7 +33,7 @@ class TestMultiAttributes:
                 new=MockedControlSystemInitialized,
             ),
         ):
-            ma = MultiAttribute(config_multi_range)
+            ma = MultiAttribute(**config_multi_range.model_dump())
             attr_range = ma.get_range()
             assert attr_range is not None
             assert len(attr_range) == 8  # (4*2)
