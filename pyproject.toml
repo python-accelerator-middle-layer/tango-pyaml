@@ -54,6 +54,7 @@ dev = [
     "mypy",                 # Typage statique (optionnel)
     "ipython",              # Débogage interactif
     "pre-commit",
+    "copier",
 ]
 
 [project.entry-points."pyaml.schemas"]
