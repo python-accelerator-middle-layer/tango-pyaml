@@ -1,15 +1,22 @@
 # tango-pyaml
 
-**Short one sentence description of tango-pyaml**
+**Bridge between **[**Tango Controls**](https://www.tango-controls.org/)** and pyAML**
 
 [![Documentation Status](https://readthedocs.org/projects/tango-pyaml/badge/?version=latest)](https://tango-pyaml.readthedocs.io/en/latest/?badge=latest)
-[![Current release](https://img.shields.io/github/v/tag/python-accelerator-middle-layer/tango-pyaml)](https://github.com/python-accelerator-middle-layer/tango-pyaml/tags)
+[![Current release](https://img.shields.io/github/v/release/python-accelerator-middle-layer/tango-pyaml)](https://github.com/python-accelerator-middle-layer/tango-pyaml/releases)
 
 ## Overview
 
-<!-- Replace the paragraph below with a longer description of the package. -->
+`tango-pyaml` is a Python bridge between the [Tango control system](https://www.tango-controls.org/) and the [pyAML](https://github.com/python-accelerator-middle-layer/pyaml) abstraction layer for control systems. It provides a set of classes that allow Tango attributes and devices to be accessed and controlled using pyAML concepts.
 
-Describe the purpose, scope, and main features of tango-pyaml here.
+## Features
+
+- ✅ Read and write Tango attributes via a unified PyAML interface
+- 🔁 Support for read-only and read/write attributes
+- 📊 Grouped attribute operations using `tango.Group`
+- 💥 Exception mapping from Tango exceptions to PyAML exceptions
+- 🧹 Designed to integrate seamlessly with PyAML `ControlSystem` components
+- 🧪 Mocked devices for unit testing without Tango runtime
 
 ## Installation
 
@@ -43,7 +50,7 @@ pre-commit install
 
 The documentation is available at:
 
-<https://tango-pyaml.readthedocs.io/en/latest/>
+<https://tango-pyaml.readthedocs.io/en/stable/>
 
 ## Contributing
 
