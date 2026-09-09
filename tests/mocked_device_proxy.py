@@ -1,6 +1,8 @@
-import tango
-import numpy as np
 from unittest.mock import MagicMock
+
+import numpy as np
+
+import tango
 
 
 class MockedAttributeInfoEx:
@@ -84,7 +86,7 @@ class MockedDeviceProxy(MagicMock):
         return val
 
     def read_attribute(self, attr_name: str):
-        if attr_name not in self.values.keys():
+        if attr_name not in self.values:
             return MockedDeviceAttribute(attr_name, None)
         return self.values[attr_name]
 

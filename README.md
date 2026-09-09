@@ -53,14 +53,12 @@ Python code:
 
 ```python
 from tango.pyaml.attribute import Attribute
-from tango.pyaml.tango_attribute import ConfigModel
 import yaml
 
 with open("attribute.yaml") as f:
     cfg_dict = yaml.safe_load(f)
 
-cfg = ConfigModel(**cfg_dict)
-attr = Attribute(cfg)
+attr = Attribute(**cfg_dict)
 
 attr.set(10.0)
 value = attr.get()
@@ -99,4 +97,3 @@ This project is licensed under the MIT License.
 ## Links
 
 - 🧺 [Repository](https://github.com/python-accelerator-middle-layer/tango-pyaml)
-

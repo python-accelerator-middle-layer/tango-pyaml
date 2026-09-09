@@ -1,11 +1,14 @@
 import logging
 
-import pyaml
 from numpy import array
 from pydantic import BaseModel
-from pyaml.control.deviceaccess import DeviceAccess
-from pyaml.control.readback_value import Value, Quality
+
+import pyaml
 import tango
+from pyaml.common.element import __pyaml_repr__
+from pyaml.control.deviceaccess import DeviceAccess
+from pyaml.control.readback_value import Quality, Value
+from pyaml.validation import DynamicValidation, register_schema
 
 from .initializable_element import InitializableElement
 from .tango_pyaml_utils import to_float_or_none
@@ -15,7 +18,7 @@ PYAMLCLASS: str = "AttributeList"
 logger = logging.getLogger(__name__)
 
 
-class ConfigModel(BaseModel):
+class AttributeListConfig(BaseModel):
     """
     Configuration model for a list of Tango attributes.
 
@@ -34,25 +37,34 @@ class ConfigModel(BaseModel):
     unit: str = ""
 
 
-class AttributeList(DeviceAccess, InitializableElement):
+@register_schema
+class AttributeList(DeviceAccess, InitializableElement, DynamicValidation):
     """
     Handle a list of Tango attributes using Tango Groups.
 
     Parameters
     ----------
-    cfg : ConfigModel
-        Configuration object with attribute list, name and unit.
+    attributes : list of str
+        List of Tango attribute paths.
+    name : str, optional
+        Group name.
+    unit : str, optional
+        Unit of the attributes.
     """
 
-    def __init__(self, cfg: ConfigModel):
+    def __init__(self, attributes: list[str], name: str = "", unit: str = ""):
         super().__init__()
-        self._cfg = cfg
+
+        self._attributes = attributes
+        self._name = name
+        self._unit = unit
+
         self._tango_groups: dict[str, tango.Group] = {}
         self._attr_dev: dict[str, list[str]] = {}
 
-        for attribute in self._cfg.attributes:
+        for attribute in self._attributes:
             attribute_dev_name, attr_name = attribute.rsplit("/", 1)
-            if attr_name not in self._attr_dev.keys():
+            if attr_name not in self._attr_dev:
                 self._attr_dev[attr_name] = []
             if attribute_dev_name not in self._attr_dev[attr_name]:
                 self._attr_dev[attr_name].append(attribute_dev_name)
@@ -60,7 +72,7 @@ class AttributeList(DeviceAccess, InitializableElement):
     def initialize(self):
         super().initialize()
         for attr_name, dev_list in self._attr_dev.items():
-            self._tango_groups[attr_name] = tango.Group(self._cfg.name)
+            self._tango_groups[attr_name] = tango.Group(self._name)
             [self._tango_groups[attr_name].add(dev) for dev in dev_list]
 
     def name(self) -> str:
@@ -72,7 +84,7 @@ class AttributeList(DeviceAccess, InitializableElement):
         str
             Group name.
         """
-        return self._cfg.name
+        return self._name
 
     def measure_name(self) -> str:
         """
@@ -83,7 +95,7 @@ class AttributeList(DeviceAccess, InitializableElement):
         str
             Group name.
         """
-        return self._cfg.name
+        return self._name
 
     def get_tango_attributes(self) -> list[str]:
         """
@@ -94,7 +106,7 @@ class AttributeList(DeviceAccess, InitializableElement):
         list[str]
             Tango attribute paths in configured order.
         """
-        return self._cfg.attributes
+        return self._attributes
 
     def set(self, value: float):
         """
@@ -152,7 +164,7 @@ class AttributeList(DeviceAccess, InitializableElement):
                     result[val.dev_name + "/" + val.obj_name] = attr_value.w_value
                 else:
                     result[val.dev_name + "/" + val.obj_name] = None
-        return array([result[attribute] for attribute in self._cfg.attributes])
+        return array([result[attribute] for attribute in self._attributes])
 
     def readback(self) -> array:
         """
@@ -183,7 +195,7 @@ class AttributeList(DeviceAccess, InitializableElement):
                     result[val.dev_name + "/" + val.obj_name] = value
                 else:
                     result[val.dev_name + "/" + val.obj_name] = None
-        list_res = [result[attribute] for attribute in self._cfg.attributes]
+        list_res = [result[attribute] for attribute in self._attributes]
         return array(list_res)
 
     def unit(self) -> str:
@@ -195,17 +207,13 @@ class AttributeList(DeviceAccess, InitializableElement):
         str
             Unit string.
         """
-        return self._cfg.unit
+        return self._unit
 
     def get_range(self) -> list[float]:
         attr_range: list[float] = [None, None]
-        if self._cfg.range is not None:
-            attr_range[0] = (
-                self._cfg.range[0] if self._cfg.range[0] is not None else None
-            )
-            attr_range[1] = (
-                self._cfg.range[1] if self._cfg.range[1] is not None else None
-            )
+        if self._range is not None:
+            attr_range[0] = self._range[0] if self._range[0] is not None else None
+            attr_range[1] = self._range[1] if self._range[1] is not None else None
         else:
             self._ensure_initialized()
             devices: list[tango.DeviceProxy] = []
@@ -226,9 +234,9 @@ class AttributeList(DeviceAccess, InitializableElement):
         try:
             self._ensure_initialized()
             [group.ping() for group in self._tango_groups.values()]
-        except tango.DevFailed | pyaml.PyAMLException:
+        except (tango.DevFailed, pyaml.PyAMLException):
             available = False
         return available
 
     def __repr__(self):
-        return repr(self._cfg).replace("ConfigModel", self.__class__.__name__)
+        return __pyaml_repr__(self)

@@ -19,4 +19,3 @@ class InitializableElement(metaclass=ABCMeta):
     def _ensure_initialized(self):
         if not self.is_initialized():
             self.initialize()
-        pass
