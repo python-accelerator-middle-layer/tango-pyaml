@@ -50,8 +50,7 @@ class MultiAttribute(DeviceAccessList, DynamicValidation):
         range: tuple[float | None, float | None] | None = None,
     ):
         super().__init__()
-
-        self._attributes = attributes
+        self._attributes = [] if attributes is None else attributes
         self._name = name
         self._unit = unit
         self._range = range
