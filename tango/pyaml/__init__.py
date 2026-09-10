@@ -1,7 +1,7 @@
-__version__ = "0.4.0"
-
 import logging.config
 import os
+
+from ._version import __version__ as __version__
 
 config_file = os.getenv("TANGO_PYAML_LOG_CONFIG", "tango_pyaml_logging.conf")
 
