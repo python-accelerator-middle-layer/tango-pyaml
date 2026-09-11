@@ -1,3 +1,5 @@
+"""Catalog backed by an explicit list of key-to-device mappings."""
+
 from pyaml import PyAMLException
 from pyaml.control.deviceaccess import DeviceAccess
 from pyaml.validation import DynamicValidation, register_schema
@@ -19,16 +21,26 @@ class StaticCatalog(Catalog, DynamicValidation):
 
     Parameters
     ----------
-    name : str
-        Catalog identifier.
-    entries : list[StaticCatalogEntry]
+    entries : list of StaticCatalogEntry
         Explicit list of key-to-device mappings. Must contain at least one
         entry, and keys must be unique within the catalog.
+
+    Attributes
+    ----------
+    _entries : list of StaticCatalogEntry
+        Entries given at construction time, in configured order.
+    _refs : dict of str to DeviceAccess
+        Lookup table built from ``_entries``, indexed by catalog key.
+
+    Methods
+    -------
+    resolve(key, control_system=None)
+        Return the device associated with ``key``.
 
     Raises
     ------
     pyaml.PyAMLException
-        If ``cfg.entries`` is empty or contains duplicate keys.
+        If ``entries`` is empty or contains duplicate keys.
     """
 
     def __init__(self, entries: list[StaticCatalogEntry]):
@@ -56,7 +68,7 @@ class StaticCatalog(Catalog, DynamicValidation):
         ----------
         key : str
             Catalog key to resolve.
-        control_system : object | None
+        control_system : object, optional
             Optional backend context. Static catalogs do not need it, but the
             argument keeps the backend catalog API uniform.
 

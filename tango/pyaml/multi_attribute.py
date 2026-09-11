@@ -1,3 +1,12 @@
+"""
+Aggregated access to several scalar Tango attributes.
+
+:class:`MultiAttribute` is the Tango implementation of the pyAML
+:class:`~pyaml.control.deviceaccesslist.DeviceAccessList` aggregator: reads and
+writes on the managed :class:`~tango.pyaml.attribute.Attribute` objects are
+issued asynchronously and collected afterwards.
+"""
+
 import logging
 
 import numpy as np
@@ -42,6 +51,71 @@ class MultiAttributeConfig(BaseModel):
 
 @register_schema
 class MultiAttribute(DeviceAccessList, DynamicValidation):
+    """
+    Aggregate several scalar Tango attributes into one vector access.
+
+    Each managed item is an :class:`~tango.pyaml.attribute.Attribute`.
+    Items can be created from the ``attributes`` paths at construction time
+    or appended later with :meth:`add_devices`; the latter is how
+    :meth:`~tango.pyaml.controlsystem.TangoControlSystem.get_aggregator`
+    uses this class.
+
+    Parameters
+    ----------
+    attributes : list of str, optional
+        List of Tango attribute paths. Default is an empty list.
+    name : str, optional
+        Group name.
+    unit : str, optional
+        Unit shared by all attributes.
+    range : tuple(min, max), optional
+        Range of valid values applied to every attribute. Use null for -∞
+        or +∞.
+
+    Attributes
+    ----------
+    _attributes : list of str
+        Tango attribute paths given at construction time.
+    _name : str
+        Group name.
+    _unit : str
+        Unit shared by all attributes.
+    _range : tuple of (float or None, float or None) or None
+        Range applied to every attribute built from ``_attributes``.
+    _items : list of Attribute
+        Managed attributes, in order.
+
+    Methods
+    -------
+    len()
+        Return the number of managed attributes.
+    get_device_at(index)
+        Return the managed attribute at a given position.
+    add_devices(devices)
+        Append one or several attributes to the aggregate.
+    set(value)
+        Write one value per attribute, asynchronously.
+    set_and_wait(value)
+        Not implemented.
+    get()
+        Return the last written value of every attribute.
+    readback()
+        Return the readback value of every attribute.
+    get_range()
+        Return the valid ranges of all attributes.
+    check_device_availability()
+        Check whether every managed device is reachable.
+    unit()
+        Return the unit shared by the attributes.
+
+    Notes
+    -----
+    Reads and writes are issued with the PyTango asynchronous API
+    (``read_attribute_asynch`` / ``write_attribute_asynch``) on every item
+    first, and the replies are then collected in order. The reply timeout is
+    the one of :class:`~tango.pyaml.device_factory.DeviceFactory`.
+    """
+
     def __init__(
         self,
         attributes: list[str] | None = None,
@@ -64,12 +138,47 @@ class MultiAttribute(DeviceAccessList, DynamicValidation):
             self._items.append(attr)
 
     def len(self) -> int:
+        """
+        Return the number of managed attributes.
+
+        Returns
+        -------
+        int
+            Number of items.
+        """
         return len(self._items)
 
     def get_device_at(self, index: int) -> DeviceAccess:
+        """
+        Return the managed attribute at a given position.
+
+        Parameters
+        ----------
+        index : int
+            Zero-based position in the aggregate.
+
+        Returns
+        -------
+        DeviceAccess
+            The :class:`~tango.pyaml.attribute.Attribute` at ``index``.
+        """
         return self._items[index]
 
     def add_devices(self, devices: DeviceAccess | list[DeviceAccess]):
+        """
+        Append one or several attributes to the aggregate.
+
+        Parameters
+        ----------
+        devices : DeviceAccess or list of DeviceAccess
+            Attribute(s) to append. Each one must be an instance of
+            :class:`~tango.pyaml.attribute.Attribute`.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            If any device is not an ``Attribute``.
+        """
         if isinstance(devices, list):
             if any(not isinstance(device, Attribute) for device in devices):
                 raise pyaml.PyAMLException(
@@ -84,6 +193,22 @@ class MultiAttribute(DeviceAccessList, DynamicValidation):
             self._items.append(devices)
 
     def set(self, value: npt.NDArray[np.float64]):
+        """
+        Write one value per attribute, asynchronously.
+
+        All writes are issued first, then every reply is awaited so that the
+        call returns once all devices acknowledged the write.
+
+        Parameters
+        ----------
+        value : numpy.ndarray of float
+            Values to write, one per managed attribute, in order.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            If the size of ``value`` does not match the number of items.
+        """
         if len(value) != len(self._items):
             raise pyaml.PyAMLException(
                 f"Size of value ({len(value)} do not match the number of managed devices ({len(self._items)})"
@@ -103,9 +228,33 @@ class MultiAttribute(DeviceAccessList, DynamicValidation):
             self._items[index]._attribute_dev.write_attribute_reply(call_id, timeout)
 
     def set_and_wait(self, value: npt.NDArray[np.float64]):
+        """
+        Not implemented.
+
+        Parameters
+        ----------
+        value : numpy.ndarray of float
+            Values to write, one per managed attribute.
+
+        Raises
+        ------
+        NotImplementedError
+            Always.
+        """
         raise NotImplementedError("Not implemented yet.")
 
     def get(self) -> npt.NDArray[np.float64]:
+        """
+        Return the last written value of every attribute.
+
+        For writable attributes the Tango ``w_value`` (setpoint) is returned;
+        for read-only ones the readback ``value`` is used instead.
+
+        Returns
+        -------
+        numpy.ndarray of float
+            Setpoints, one per managed attribute, in order.
+        """
         values = []
         asynch_call_ids = []
         timeout = DeviceFactory().get_timeout_ms()
@@ -129,6 +278,14 @@ class MultiAttribute(DeviceAccessList, DynamicValidation):
         return np.array(values)
 
     def readback(self) -> np.array:
+        """
+        Return the readback value of every attribute.
+
+        Returns
+        -------
+        numpy.ndarray of float
+            Readback values, one per managed attribute, in order.
+        """
         values = []
         asynch_call_ids = []
         timeout = DeviceFactory().get_timeout_ms()
@@ -150,12 +307,30 @@ class MultiAttribute(DeviceAccessList, DynamicValidation):
         return np.array(values)
 
     def get_range(self) -> list[float]:
+        """
+        Return the valid ranges of all attributes.
+
+        Returns
+        -------
+        list of float or None
+            Flattened ``[min0, max0, min1, max1, ...]`` list, one pair per
+            managed attribute, where an unbounded limit is ``None``.
+        """
         attr_range: list[float] = []
         for device in self._items:
             attr_range.extend(device.get_range())
         return attr_range
 
     def check_device_availability(self) -> bool:
+        """
+        Check whether every managed device is reachable.
+
+        Returns
+        -------
+        bool
+            ``True`` if all devices answer, ``False`` at the first
+            unreachable one (or if there is no item).
+        """
         available = False
         for device in self._items:
             available = device.check_device_availability()
@@ -164,6 +339,14 @@ class MultiAttribute(DeviceAccessList, DynamicValidation):
         return available
 
     def unit(self) -> str:
+        """
+        Return the unit shared by the attributes.
+
+        Returns
+        -------
+        str
+            Unit string.
+        """
         return self._unit
 
     def __repr__(self):
