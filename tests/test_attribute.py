@@ -1,14 +1,19 @@
+from unittest.mock import patch
+
 import pyaml.control.readback_value
 import pytest
 
+from tango.pyaml.attribute import Attribute
+from tango.pyaml.attribute_list import AttributeList
 from tango.pyaml.attribute_read_only import AttributeReadOnly
 
 from .mocked_control_system_initialized import MockedControlSystemInitialized
-from .mocked_device_proxy import *
+from .mocked_device_proxy import (
+    MockedAttributeInfoEx,
+    MockedDeviceProxy,
+    tango,
+)
 from .mocked_group import MockedGroup
-from unittest.mock import patch
-from tango.pyaml.attribute import Attribute
-from tango.pyaml.attribute_list import AttributeList
 
 
 class MockedReadExceptDeviceProxy(MockedDeviceProxy):
@@ -33,7 +38,7 @@ class TestAttributes:
                 new=MockedControlSystemInitialized,
             ),
         ):
-            attr = Attribute(config)
+            attr = Attribute(**config.model_dump())
             attr.set_and_wait(42.0)
             assert attr.get() == 42.0
             assert attr.readback() == 42.0
@@ -53,7 +58,7 @@ class TestAttributes:
                 new=MockedControlSystemInitialized,
             ),
         ):
-            attr = Attribute(config)
+            attr = Attribute(**config.model_dump())
             with pytest.raises(pyaml.PyAMLException) as exc:
                 attr.readback()
             assert exc is not None
@@ -70,13 +75,13 @@ class TestAttributes:
             expected_message = (
                 "Tango attribute sys/tg_test/1/float_scalar is not writable."
             )
-            attr1 = Attribute(config)
+            attr1 = Attribute(**config.model_dump())
             with pytest.raises(pyaml.PyAMLException) as exc:
                 attr1.get()
             assert exc.value.message == expected_message
 
             # Read-only attributes cannot be sets.
-            attr = AttributeReadOnly(config)
+            attr = AttributeReadOnly(**config.model_dump())
             with pytest.raises(pyaml.PyAMLException) as exc2:
                 attr.set(10)
             assert exc2.value.message == expected_message
@@ -89,7 +94,7 @@ class TestAttributes:
                 new=MockedControlSystemInitialized,
             ),
         ):
-            attr_list = AttributeList(config_group)
+            attr_list = AttributeList(**config_group.model_dump())
             attr_list.set_and_wait(10)
             vals = attr_list.readback()
             for val in vals:
@@ -103,6 +108,6 @@ class TestAttributes:
                 new=MockedControlSystemInitialized,
             ),
         ):
-            attr1 = Attribute(config)
-            attr2 = Attribute(config)
+            attr1 = Attribute(**config.model_dump())
+            attr2 = Attribute(**config.model_dump())
             assert attr1._attribute_dev is attr2._attribute_dev

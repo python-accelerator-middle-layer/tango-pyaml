@@ -1,6 +1,8 @@
-import tango
-import numpy as np
 from unittest.mock import MagicMock
+
+import numpy as np
+
+import tango
 
 
 class MockedAttributeInfoEx:
@@ -10,11 +12,15 @@ class MockedAttributeInfoEx:
         writable=tango.AttrWriteType.READ_WRITE,
         min_value: str = "",
         max_value: str = "",
+        unit: str = "",
+        data_format=tango.AttrDataFormat.SCALAR,
     ):
         self.name = name
         self.writable = writable
+        self.unit = unit
         self.min_value = min_value
         self.max_value = max_value
+        self.data_format = data_format
 
 
 class MockedDeviceAttribute:
@@ -80,7 +86,7 @@ class MockedDeviceProxy(MagicMock):
         return val
 
     def read_attribute(self, attr_name: str):
-        if attr_name not in self.values.keys():
+        if attr_name not in self.values:
             return MockedDeviceAttribute(attr_name, None)
         return self.values[attr_name]
 
@@ -134,13 +140,18 @@ class MockedDeviceProxy(MagicMock):
 
 
 class MockedAttributeProxy(MagicMock):
-    def __init__(self, attr_full_name, *args, **kwargs):
+    def __init__(self, attr_full_name, attr_config=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.attr_full_name = attr_full_name
         self.device_name, self._attr_name = attr_full_name.rsplit("/", 1)
         self.device_proxy = MockedDeviceProxy(self.device_name)
+        # Tests can inject a specific config to exercise catalog metadata
+        # handling without creating a dedicated proxy class each time.
+        self.attr_config = attr_config
 
     def get_config(self, *args, **kwds):
+        if self.attr_config is not None:
+            return self.attr_config
         return self.device_proxy.get_attribute_config(self.name(), *args, **kwds)
 
     def read(self, *args, **kwds):

@@ -1,0 +1,9 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: 0.1.0
+_src_path: https://github.com/python-accelerator-middle-layer/pyaml-repository-template.git
+distribution_name: tango-pyaml
+html_title: tango-pyaml
+import_name: tango.pyaml
+package_name: tango-pyaml
+repository_url: https://github.com/python-accelerator-middle-layer/tango-pyaml
+use_docs_extra: false

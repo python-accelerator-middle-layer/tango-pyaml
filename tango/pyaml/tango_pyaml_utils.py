@@ -1,8 +1,26 @@
-import tango
+"""Small helpers shared by the Tango pyAML classes."""
+
 import pyaml
+import tango
 
 
 def to_float_or_none(s):
+    """
+    Convert a value to ``float``, returning ``None`` when impossible.
+
+    Tango reports unset attribute limits as the string ``"Not specified"``;
+    this helper maps such values to ``None``.
+
+    Parameters
+    ----------
+    s : object
+        Value to convert (typically a string or a number).
+
+    Returns
+    -------
+    float or None
+        The converted value, or ``None`` if ``s`` cannot be converted.
+    """
     try:
         return float(s)
     except (TypeError, ValueError):
