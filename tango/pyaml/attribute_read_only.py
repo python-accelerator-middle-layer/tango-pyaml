@@ -1,3 +1,5 @@
+"""Read-only scalar Tango attribute."""
+
 import logging
 
 import pyaml
@@ -19,6 +21,11 @@ class AttributeReadOnly(Attribute, DynamicValidation):
     """
     Read-only Tango attribute.
 
+    Behaves like :class:`~tango.pyaml.attribute.Attribute` but rejects every
+    write and never checks the Tango attribute writability on
+    initialization. :meth:`get` returns the readback value instead of the
+    last written value.
+
     Parameters
     ----------
     attribute : str
@@ -31,6 +38,26 @@ class AttributeReadOnly(Attribute, DynamicValidation):
         Zero-based index into a SPECTRUM attribute. When set, the instance
         behaves as a read-only scalar view of one vector element; writes are
         always rejected and a SPECTRUM data_format is enforced on init.
+
+    Attributes
+    ----------
+    _attribute : str
+        Full path of the Tango attribute.
+    _unit : str
+        Unit of the attribute.
+    _range : tuple of (float or None, float or None) or None
+        Configured range, or ``None`` to query Tango.
+    _index : int or None
+        Index into a SPECTRUM attribute, or ``None`` for scalar access.
+
+    Methods
+    -------
+    set(value)
+        Disallowed write operation.
+    set_and_wait(value)
+        Disallowed synchronous write operation.
+    get()
+        Return the current readback value of the attribute.
     """
 
     def __init__(
@@ -53,6 +80,11 @@ class AttributeReadOnly(Attribute, DynamicValidation):
         """
         Disallowed write operation.
 
+        Parameters
+        ----------
+        value : float
+            Ignored.
+
         Raises
         ------
         pyaml.PyAMLException
@@ -66,6 +98,11 @@ class AttributeReadOnly(Attribute, DynamicValidation):
         """
         Disallowed synchronous write operation.
 
+        Parameters
+        ----------
+        value : float
+            Ignored.
+
         Raises
         ------
         pyaml.PyAMLException
@@ -76,4 +113,20 @@ class AttributeReadOnly(Attribute, DynamicValidation):
         )
 
     def get(self) -> float:
+        """
+        Return the current readback value of the attribute.
+
+        A read-only attribute has no setpoint, so this is equivalent to
+        ``readback().value``.
+
+        Returns
+        -------
+        float
+            The readback value.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            If the Tango read fails.
+        """
         return self.readback().value
