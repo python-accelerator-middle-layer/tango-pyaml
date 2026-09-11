@@ -1,3 +1,12 @@
+"""
+Catalog resolving keys that are direct Tango attribute references.
+
+Unlike :class:`~tango.pyaml.static_catalog.StaticCatalog`, no explicit mapping
+is needed: the catalog key *is* the Tango attribute path. In connected mode the
+attribute configuration (unit, limits, writability, data format) is fetched
+from Tango to build the appropriate device access object.
+"""
+
 from typing import ClassVar
 
 import pyaml
@@ -22,8 +31,38 @@ class TangoCatalog(Catalog, DynamicValidation):
     or indexed references into a SPECTRUM attribute
     (``domain/family/member/attribute@index``).
 
-    disconnected : bool
+    Parameters
+    ----------
+    disconnected : bool, optional
         If true, resolve Tango attribute names without querying Tango.
+        Default is False.
+
+    Attributes
+    ----------
+    _WRITABLE_TYPES : set of tango.AttrWriteType
+        Tango write types for which a writable
+        :class:`~tango.pyaml.attribute.Attribute` is built.
+    _disconnected : bool
+        ``True`` when Tango is never queried.
+    _refs : dict of (int, str) to DeviceAccess
+        Cache of resolved devices indexed by ``(id(control_system), key)``.
+    _data_formats : dict of (int, str) to tango.AttrDataFormat
+        Data format of each resolved key, with the same indexing as
+        ``_refs``.
+
+    Methods
+    -------
+    resolve(key, control_system=None)
+        Resolve a Tango attribute reference into a DeviceAccess.
+    is_disconnected()
+        Tell whether the catalog works without querying Tango.
+    get_data_format(key, control_system=None)
+        Return the Tango data format for a resolved attribute.
+
+    Notes
+    -----
+    Resolved DeviceAccess objects are bound to one control-system context
+    because metadata lookup depends on that control system's Tango host.
     """
 
     _WRITABLE_TYPES: ClassVar[set[tango.AttrWriteType]] = {
@@ -51,9 +90,9 @@ class TangoCatalog(Catalog, DynamicValidation):
           :class:`~tango.pyaml.attribute.Attribute` or
           :class:`~tango.pyaml.attribute_read_only.AttributeReadOnly`.
         - ``domain/family/member/attribute@index`` — resolves to a scalar view
-          of one element in a SPECTRUM attribute
-          (:class:`~tango.pyaml.attribute_indexed.AttributeIndexed` or
-          :class:`~tango.pyaml.attribute_indexed_read_only.AttributeIndexedReadOnly`).
+          of one element in a SPECTRUM attribute (an indexed
+          :class:`~tango.pyaml.attribute.Attribute` or
+          :class:`~tango.pyaml.attribute_read_only.AttributeReadOnly`).
 
         In connected mode (``disconnected=False``) indexed keys additionally verify
         that the Tango attribute is a SPECTRUM.
@@ -103,6 +142,14 @@ class TangoCatalog(Catalog, DynamicValidation):
         return self._refs[cache_key]
 
     def is_disconnected(self) -> bool:
+        """
+        Tell whether the catalog works without querying Tango.
+
+        Returns
+        -------
+        bool
+            ``True`` in disconnected mode.
+        """
         return self._disconnected
 
     def get_data_format(
@@ -129,6 +176,15 @@ class TangoCatalog(Catalog, DynamicValidation):
         return self._data_formats[(id(control_system), key)]
 
     def _validate_control_system(self, control_system: object | None, key: str) -> None:
+        """
+        Check that ``control_system`` is a usable TangoControlSystem.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            If ``control_system`` is ``None`` or not a
+            :class:`~tango.pyaml.controlsystem.TangoControlSystem`.
+        """
         from .controlsystem import TangoControlSystem
 
         if control_system is None:
@@ -186,6 +242,7 @@ class TangoCatalog(Catalog, DynamicValidation):
     def _build_disconnected_attribute(
         self, cache_key: tuple[int, str], key: str
     ) -> DeviceAccess:
+        """Build a writable attribute without querying Tango."""
         # In disconnected mode, keep all metadata local. In particular, setting
         # range avoids Attribute.get_range() from lazily querying Tango later.
         self._data_formats[cache_key] = tango.AttrDataFormat.FMT_UNKNOWN
@@ -194,6 +251,7 @@ class TangoCatalog(Catalog, DynamicValidation):
     def _build_disconnected_indexed(
         self, cache_key: tuple[int, str], attr_path: str, index: int
     ) -> DeviceAccess:
+        """Build an indexed attribute without querying Tango."""
         # Cannot verify SPECTRUM in disconnected mode; store FMT_UNKNOWN.
         self._data_formats[cache_key] = tango.AttrDataFormat.FMT_UNKNOWN
         return Attribute(attribute=attr_path, index=index, range=(None, None))
@@ -201,6 +259,14 @@ class TangoCatalog(Catalog, DynamicValidation):
     def _build_connected_attribute(
         self, cache_key: tuple[int, str], control_system: object, key: str
     ) -> DeviceAccess:
+        """
+        Build a scalar attribute from the Tango attribute configuration.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            If the Tango call fails.
+        """
         tango_attr_name = self._tango_attribute_name(control_system, key)
         try:
             # AttributeProxy.get_config() is the most direct way to retrieve
@@ -273,6 +339,14 @@ class TangoCatalog(Catalog, DynamicValidation):
         tango.AttrDataFormat,
         tango.AttrWriteType,
     ]:
+        """
+        Extract ``(unit, range, data_format, writable)`` from a Tango config.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            If ``attr_config`` lacks one of the expected fields.
+        """
         try:
             unit = attr_config.unit or ""
             attr_range = (
@@ -290,6 +364,7 @@ class TangoCatalog(Catalog, DynamicValidation):
         return unit, attr_range, data_format, writable
 
     def _tango_attribute_name(self, control_system: object, attr_path: str) -> str:
+        """Prefix ``attr_path`` with the control-system Tango host, if any."""
         tango_host = control_system.get_tango_host()
         if tango_host:
             return f"//{tango_host}/{attr_path}"

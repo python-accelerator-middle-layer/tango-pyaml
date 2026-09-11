@@ -1,3 +1,5 @@
+"""Read-only list of Tango attributes handled through Tango groups."""
+
 import logging
 
 import pyaml
@@ -10,13 +12,17 @@ PYAMLCLASS: str = "AttributeListReadOnly"
 logger = logging.getLogger(__name__)
 
 
-class AttributeListReadOnlyConfig(AttributeListConfig): ...
+class AttributeListReadOnlyConfig(AttributeListConfig):
+    """Configuration model for a read-only list of Tango attributes."""
 
 
 @register_schema
 class AttributeListReadOnly(AttributeList, DynamicValidation):
     """
-    Handle a list of Tango attributes using Tango Groups.
+    Handle a read-only list of Tango attributes using Tango Groups.
+
+    Same as :class:`~tango.pyaml.attribute_list.AttributeList`, except that
+    asynchronous writes through :meth:`set` are rejected.
 
     Parameters
     ----------
@@ -26,6 +32,22 @@ class AttributeListReadOnly(AttributeList, DynamicValidation):
         Group name.
     unit : str, optional
         Unit of the attributes.
+
+    Attributes
+    ----------
+    _attributes : list of str
+        Tango attribute paths in configured order.
+    _name : str
+        Group name.
+    _unit : str
+        Unit of the attributes.
+
+    Methods
+    -------
+    set(value)
+        Disallowed asynchronous write operation.
+    set_and_wait(value)
+        Write a value synchronously to all Tango attributes.
     """
 
     def __init__(self, attributes: list[str], name: str = "", unit: str = ""):
@@ -37,12 +59,17 @@ class AttributeListReadOnly(AttributeList, DynamicValidation):
 
     def set(self, value: float):
         """
-        Write a value asynchronously to all Tango attributes.
+        Disallowed asynchronous write operation.
 
         Parameters
         ----------
         value : float
-            Value to write.
+            Ignored.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            Always raised because the attribute list is read-only.
         """
         raise pyaml.PyAMLException(
             f"Tango attribute list {self.name()} is not writable."

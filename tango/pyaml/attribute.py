@@ -1,3 +1,11 @@
+"""
+Scalar Tango attribute access.
+
+This module maps a single Tango attribute (or one element of a SPECTRUM
+attribute) onto the pyAML :class:`~pyaml.control.deviceaccess.DeviceAccess`
+interface.
+"""
+
 import copy
 import logging
 
@@ -48,6 +56,10 @@ class Attribute(DeviceAccess, InitializableElement, DynamicValidation):
     """
     Tango attribute that can be written to.
 
+    The Tango device proxy is obtained lazily from
+    :class:`~tango.pyaml.device_factory.DeviceFactory` on first access, so
+    building an ``Attribute`` never contacts the control system.
+
     Parameters
     ----------
     attribute : str
@@ -62,6 +74,56 @@ class Attribute(DeviceAccess, InitializableElement, DynamicValidation):
         always rejected and a SPECTRUM data_format is enforced on init.
     writable : bool, optional
         If the attribute should be writable. Default is True.
+
+    Attributes
+    ----------
+    _attribute : str
+        Full path of the Tango attribute.
+    _unit : str
+        Unit of the attribute.
+    _range : tuple of (float or None, float or None) or None
+        Configured range, or ``None`` to query Tango on first use.
+    _index : int or None
+        Index into a SPECTRUM attribute, or ``None`` for scalar access.
+    _writable : bool
+        ``True`` if writes are allowed (always ``False`` when indexed).
+    _attribute_dev : tango.DeviceProxy or None
+        Proxy of the device owning the attribute, set on initialization.
+    _attr_config : tango.AttributeInfoEx or None
+        Tango attribute configuration, set on initialization.
+    _attribute_dev_name : str or None
+        Device part of the attribute path, set on initialization.
+    _attr_name : str or None
+        Attribute part of the attribute path, set on initialization.
+
+    Methods
+    -------
+    initialize()
+        Connect to the Tango device and check the attribute configuration.
+    is_writable()
+        Tell whether the attribute accepts writes.
+    set(value)
+        Write a value asynchronously to the Tango attribute.
+    set_and_wait(value)
+        Write a value synchronously to the Tango attribute.
+    get()
+        Get the last written value of the attribute.
+    readback()
+        Return the readback value with metadata.
+    unit()
+        Return the unit of the attribute.
+    name()
+        Return the full attribute name.
+    measure_name()
+        Return the short attribute name (last component).
+    get_tango_attribute()
+        Return the raw Tango attribute path without index decoration.
+    clone_with_tango_attribute(attribute)
+        Return a shallow copy configured with another Tango attribute path.
+    get_range()
+        Return the valid range of the attribute.
+    check_device_availability()
+        Check whether the Tango device answers to a ping.
 
     Raises
     ------
@@ -92,6 +154,20 @@ class Attribute(DeviceAccess, InitializableElement, DynamicValidation):
         self._attr_name: str = None
 
     def initialize(self):
+        """
+        Connect to the Tango device and check the attribute configuration.
+
+        Splits the attribute path into device and attribute names, obtains
+        the device proxy from :class:`~tango.pyaml.device_factory.DeviceFactory`
+        and reads the attribute configuration.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            If the device proxy cannot be created, if an indexed attribute is
+            not a SPECTRUM, or if a writable attribute is not writable in
+            Tango.
+        """
         super().initialize()
         try:
             self._attribute_dev_name, self._attr_name = self._attribute.rsplit("/", 1)
@@ -122,6 +198,14 @@ class Attribute(DeviceAccess, InitializableElement, DynamicValidation):
             )
 
     def is_writable(self):
+        """
+        Tell whether the attribute accepts writes.
+
+        Returns
+        -------
+        bool
+            ``True`` if :meth:`set` and :meth:`set_and_wait` are allowed.
+        """
         return self._writable
 
     def set(self, value: float):
@@ -253,6 +337,11 @@ class Attribute(DeviceAccess, InitializableElement, DynamicValidation):
         ----------
         attribute : str
             Tango attribute path to store in the cloned instance.
+
+        Returns
+        -------
+        Attribute
+            Copy of this instance pointing to ``attribute``.
         """
         new_obj = copy.copy(self)
         new_obj._attribute = attribute
@@ -300,6 +389,23 @@ class Attribute(DeviceAccess, InitializableElement, DynamicValidation):
             raise tango_to_PyAMLException(df)
 
     def get_range(self) -> list[float]:
+        """
+        Return the valid range of the attribute.
+
+        The configured ``range`` takes precedence; otherwise the ``min_value``
+        and ``max_value`` limits of the Tango attribute configuration are
+        used, which requires initialization.
+
+        Returns
+        -------
+        list of float or None
+            ``[min, max]`` where an unbounded limit is ``None``.
+
+        Raises
+        ------
+        pyaml.PyAMLException
+            If no range is configured and initialization fails.
+        """
         attr_range: list[float] = [None, None]
         if self._range is not None:
             attr_range[0] = self._range[0] if self._range[0] is not None else None
@@ -314,6 +420,15 @@ class Attribute(DeviceAccess, InitializableElement, DynamicValidation):
         return attr_range
 
     def check_device_availability(self) -> bool:
+        """
+        Check whether the Tango device answers to a ping.
+
+        Returns
+        -------
+        bool
+            ``True`` if the device is reachable, ``False`` if initialization
+            or the ping fails.
+        """
         available = True
         try:
             self._ensure_initialized()
