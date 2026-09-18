@@ -4,6 +4,7 @@ from unittest.mock import patch
 import pyaml
 import pytest
 
+import tango
 from tango.pyaml import __version__
 from tango.pyaml.attribute import Attribute, AttributeConfig
 from tango.pyaml.attribute_list import AttributeList, AttributeListConfig
@@ -15,8 +16,13 @@ from tango.pyaml.attribute_read_only import AttributeReadOnly, AttributeReadOnly
 from tango.pyaml.controlsystem import TangoControlSystem
 from tango.pyaml.static_catalog import StaticCatalog
 from tango.pyaml.static_catalog_entry import StaticCatalogEntry
+from tango.pyaml.tango_catalog import TangoCatalog
 
-from .mocked_device_proxy import MockedDeviceProxy
+from .mocked_device_proxy import (
+    MockedAttributeInfoEx,
+    MockedAttributeProxy,
+    MockedDeviceProxy,
+)
 
 
 def test_init_cs(caplog, config_tango_cs):
@@ -150,10 +156,33 @@ def test_get_device_rejects_preconstructed_device_access(config):
         cs.get_device_access(Attribute(**config.model_dump()))
 
 
-def test_get_device_requires_catalog_for_string_key():
+def test_default_catalog_is_connected_tango_catalog_resolving_string_key():
+    cs = TangoControlSystem(name="test_tango_cs", tango_host="tangodb:10000")
+
+    assert isinstance(cs.get_catalog(), TangoCatalog)
+    assert not cs.get_catalog().is_disconnected()
+
+    attr_config = MockedAttributeInfoEx(
+        name="float_scalar", writable=tango.AttrWriteType.READ, unit="A"
+    )
+    with patch(
+        "tango.AttributeProxy",
+        return_value=MockedAttributeProxy(
+            "//tangodb:10000/sys/tg_test/1/float_scalar", attr_config
+        ),
+    ):
+        resolved = cs.get_device_access("sys/tg_test/1/float_scalar")
+
+    assert resolved.name() == "//tangodb:10000/sys/tg_test/1/float_scalar"
+    assert resolved.unit() == "A"
+
+
+def test_default_catalog_rejects_invalid_tango_reference():
     cs = TangoControlSystem(name="test_tango_cs")
 
-    with pytest.raises(pyaml.PyAMLException, match="has no catalog configured"):
+    with pytest.raises(
+        pyaml.PyAMLException, match="Expected 'domain/family/member/attribute'"
+    ):
         cs.get_device_access("BPM_C01-01/x")
 
 
