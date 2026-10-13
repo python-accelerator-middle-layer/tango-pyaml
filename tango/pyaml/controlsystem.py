@@ -23,6 +23,7 @@ from .attribute_list_read_only import AttributeListReadOnly, AttributeListReadOn
 from .attribute_read_only import AttributeReadOnly, AttributeReadOnlyConfig
 from .catalog import Catalog
 from .multi_attribute import MultiAttribute
+from .tango_catalog import TangoCatalog
 
 PYAMLCLASS: str = "TangoControlSystem"
 
@@ -42,7 +43,10 @@ class TangoControlSystem(ControlSystem, DynamicValidation):
         Tango host URL (``host:port``). Default is ``None``, meaning the
         ``TANGO_HOST`` environment variable is used by PyTango.
     catalog : Catalog, optional
-        Catalog instance used to resolve PyAML device keys.
+        Catalog instance used to resolve PyAML device keys. Default is
+        ``None``, meaning a connected
+        :class:`~tango.pyaml.tango_catalog.TangoCatalog` is created
+        automatically (keys are resolved directly as Tango attribute paths).
     debug_level : str or int, optional
         Debug verbosity level. Such as INFO, DEBUG, WARNING, ERROR, CRITICAL.
         Or 10, 20, 30, 40, 50.
@@ -57,8 +61,9 @@ class TangoControlSystem(ControlSystem, DynamicValidation):
         Name of the control system.
     _tango_host : str or None
         Configured Tango host.
-    _catalog : Catalog or None
-        Catalog used to resolve device keys.
+    _catalog : Catalog
+        Catalog used to resolve device keys. Always set, defaulting to a
+        connected TangoCatalog when none is supplied.
     _debug_level : str or int or None
         Requested log level.
     _lazy_devices : bool
@@ -101,7 +106,7 @@ class TangoControlSystem(ControlSystem, DynamicValidation):
         super().__init__()
         self._name = name
         self._tango_host = tango_host
-        self._catalog = catalog
+        self._catalog = catalog if catalog is not None else TangoCatalog()
         self._debug_level = debug_level
         self._lazy_devices = lazy_devices
         self._timeout_ms = timeout_ms
@@ -226,8 +231,8 @@ class TangoControlSystem(ControlSystem, DynamicValidation):
         Raises
         ------
         pyaml.PyAMLException
-            If ``ref`` is an already constructed DeviceAccess, if no usable
-            catalog is configured for a string key, or if ``ref`` has an
+            If ``ref`` is an already constructed DeviceAccess, if the
+            configured catalog has an unsupported type, or if ``ref`` has an
             unsupported type.
         """
         if ref is None:
@@ -242,10 +247,6 @@ class TangoControlSystem(ControlSystem, DynamicValidation):
 
         if isinstance(ref, str):
             catalog = self.get_catalog()
-            if catalog is None:
-                raise PyAMLException(
-                    f"TangoControlSystem '{self.name()}' has no catalog configured."
-                )
             if not isinstance(catalog, Catalog):
                 raise PyAMLException(
                     f"TangoControlSystem '{self.name()}' has unsupported catalog type "
@@ -373,14 +374,15 @@ class TangoControlSystem(ControlSystem, DynamicValidation):
         """
         return None
 
-    def get_catalog(self) -> Catalog | None:
+    def get_catalog(self) -> Catalog:
         """
         Return the catalog that references all control system devices.
 
         Returns
         -------
-        Catalog or None
-            The catalog, or ``None`` if none was configured.
+        Catalog
+            The catalog used to resolve device keys (a default connected
+            TangoCatalog when none was supplied at construction).
         """
         return self._catalog
 
